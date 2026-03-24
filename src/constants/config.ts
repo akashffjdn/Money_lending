@@ -1,0 +1,16 @@
+export const Config = {
+  appName: 'LendEase',
+  version: '1.0.0',
+  build: '1',
+  supportPhone: '1800-123-4567',
+  supportEmail: 'support@lendease.in',
+  minLoanAmount: 10000,
+  maxLoanAmount: 1000000,
+  minInterestRate: 8,
+  maxInterestRate: 36,
+  defaultInterestRate: 14.5,
+  tenureOptions: [3, 6, 12, 18, 24, 36, 48, 60],
+  otpLength: 6,
+  otpTimeout: 30,
+  mockOtp: '123456',
+} as const;
