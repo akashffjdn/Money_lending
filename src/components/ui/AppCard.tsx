@@ -1,15 +1,8 @@
 import React from 'react';
 import { Pressable, View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { Shadows } from '../../constants/spacing';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type CardVariant = 'elevated' | 'outlined' | 'flat';
 
@@ -21,8 +14,6 @@ interface AppCardProps {
   topStrip?: boolean;
 }
 
-const SPRING_CONFIG = { damping: 15, stiffness: 200 };
-
 const AppCard: React.FC<AppCardProps> = ({
   children,
   onPress,
@@ -31,23 +22,6 @@ const AppCard: React.FC<AppCardProps> = ({
   topStrip = false,
 }) => {
   const { colors } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    if (onPress) {
-      scale.value = withSpring(0.98, SPRING_CONFIG);
-    }
-  };
-
-  const handlePressOut = () => {
-    if (onPress) {
-      scale.value = withSpring(1, SPRING_CONFIG);
-    }
-  };
 
   const getCardStyle = (): ViewStyle => {
     switch (variant) {
@@ -92,23 +66,27 @@ const AppCard: React.FC<AppCardProps> = ({
 
   if (onPress) {
     return (
-      <AnimatedPressable
+      <Pressable
         onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[styles.card, cardStyle, topStrip && styles.cardWithStrip, animatedStyle, style]}
+        style={({ pressed }) => [
+          styles.card,
+          cardStyle,
+          topStrip && styles.cardWithStrip,
+          style,
+          pressed && { transform: [{ scale: 0.98 }] },
+        ]}
       >
         {content}
-      </AnimatedPressable>
+      </Pressable>
     );
   }
 
   return (
-    <Animated.View
-      style={[styles.card, cardStyle, topStrip && styles.cardWithStrip, animatedStyle, style]}
+    <View
+      style={[styles.card, cardStyle, topStrip && styles.cardWithStrip, style]}
     >
       {content}
-    </Animated.View>
+    </View>
   );
 };
 

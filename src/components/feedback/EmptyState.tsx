@@ -1,12 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
 import AppButton from '../ui/AppButton';
@@ -27,25 +20,20 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
 }) => {
   const { colors } = useTheme();
-  const translateY = useSharedValue(0);
+  const floatAnim = useRef(new Animated.Value(0)).current;
 
-  React.useEffect(() => {
-    translateY.value = withRepeat(
-      withSequence(
-        withTiming(-8, { duration: 1500 }),
-        withTiming(0, { duration: 1500 })
-      ),
-      -1
-    );
-  }, [translateY]);
-
-  const iconAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -8, duration: 1500, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Animated.View style={iconAnimatedStyle}>
+      <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
         <MaterialCommunityIcons
           name={icon}
           size={64}

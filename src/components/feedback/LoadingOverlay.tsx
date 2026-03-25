@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '../../hooks/useTheme';
 
 interface LoadingOverlayProps {
@@ -22,14 +21,14 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   if (!visible) return null;
 
   return (
-    <Animated.View entering={FadeIn} style={styles.overlay}>
+    <View style={styles.overlay}>
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.message, { color: colors.text }]}>
           {message}
         </Text>
       </View>
-    </Animated.View>
+    </View>
   );
 };
 

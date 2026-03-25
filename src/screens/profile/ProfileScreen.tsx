@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   Pressable,
   ScrollView,
   Alert,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { MotiView } from '../../utils/MotiCompat';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 
@@ -22,6 +24,7 @@ import AppAvatar from '../../components/ui/AppAvatar';
 import AppBadge from '../../components/ui/AppBadge';
 import AppSwitch from '../../components/ui/AppSwitch';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
+import LanguageSheet, { type LanguageSheetRef } from '../../components/shared/LanguageSheet';
 import { ProfileStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
@@ -33,18 +36,22 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
 interface MenuItemProps {
   icon: string;
   label: string;
+  subtitle?: string;
   onPress: () => void;
   rightElement?: React.ReactNode;
   danger?: boolean;
+  isLast?: boolean;
+  colors: any;
 }
 
 const MenuItem = memo<MenuItemProps>(
-  ({ icon, label, onPress, rightElement, danger }) => {
-    const { colors } = useTheme();
-
+  ({ icon, label, subtitle, onPress, rightElement, danger, isLast, colors }) => {
     return (
       <Pressable
-        onPress={onPress}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          onPress();
+        }}
         style={({ pressed }) => [
           styles.menuItem,
           pressed && { backgroundColor: colors.surfaceHover },
@@ -52,7 +59,7 @@ const MenuItem = memo<MenuItemProps>(
       >
         <View
           style={[
-            styles.menuIconContainer,
+            styles.menuIconCircle,
             {
               backgroundColor: danger
                 ? colors.errorMuted
@@ -62,23 +69,38 @@ const MenuItem = memo<MenuItemProps>(
         >
           <MaterialCommunityIcons
             name={icon as any}
-            size={18}
+            size={20}
             color={danger ? colors.error : colors.primary}
           />
         </View>
-        <Text
-          style={[
-            styles.menuLabel,
-            { color: danger ? colors.error : colors.text },
-          ]}
-        >
-          {label}
-        </Text>
+        <View style={styles.menuTextBlock}>
+          <Text
+            style={[
+              styles.menuLabel,
+              { color: danger ? colors.error : colors.text },
+            ]}
+          >
+            {label}
+          </Text>
+          {subtitle ? (
+            <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
         {rightElement ?? (
           <MaterialCommunityIcons
             name="chevron-right"
             size={20}
             color={colors.textMuted}
+          />
+        )}
+        {!isLast && (
+          <View
+            style={[
+              styles.menuSeparator,
+              { backgroundColor: colors.border },
+            ]}
           />
         )}
       </Pressable>
@@ -90,8 +112,7 @@ const MenuItem = memo<MenuItemProps>(
 /*  Section Header                                                    */
 /* ------------------------------------------------------------------ */
 
-const SectionHeader = memo<{ title: string }>(({ title }) => {
-  const { colors } = useTheme();
+const SectionHeader = memo<{ title: string; colors: any }>(({ title, colors }) => {
   return (
     <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
       {title}
@@ -100,21 +121,55 @@ const SectionHeader = memo<{ title: string }>(({ title }) => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Stat Column                                                       */
+/*  Stat Card                                                         */
 /* ------------------------------------------------------------------ */
 
-interface StatColumnProps {
+interface StatCardProps {
   icon: string;
   label: string;
   value: string;
   valueColor?: string;
+  colors: any;
+  delay: number;
 }
 
-const StatColumn = memo<StatColumnProps>(({ icon, label, value, valueColor }) => {
-  const { colors } = useTheme();
+const StatCard = memo<StatCardProps>(({ icon, label, value, valueColor, colors, delay }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 500,
+      delay,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   return (
-    <View style={styles.statColumn}>
-      <View style={[styles.statIconCircle, { backgroundColor: colors.primaryMuted }]}>
+    <Animated.View
+      style={[
+        styles.statCard,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          opacity: anim,
+          transform: [
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [16, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.statCardIcon,
+          { backgroundColor: colors.primaryMuted },
+        ]}
+      >
         <MaterialCommunityIcons
           name={icon as any}
           size={20}
@@ -123,16 +178,16 @@ const StatColumn = memo<StatColumnProps>(({ icon, label, value, valueColor }) =>
       </View>
       <Text
         style={[
-          styles.statValue,
+          styles.statCardValue,
           { color: valueColor ?? colors.text },
         ]}
       >
         {value}
       </Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+      <Text style={[styles.statCardLabel, { color: colors.textMuted }]}>
         {label}
       </Text>
-    </View>
+    </Animated.View>
   );
 });
 
@@ -141,7 +196,7 @@ const StatColumn = memo<StatColumnProps>(({ icon, label, value, valueColor }) =>
 /* ------------------------------------------------------------------ */
 
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const authStore = useAuthStore();
   const themeStore = useThemeStore();
   const loanStore = useLoanStore();
@@ -150,6 +205,18 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+
+  const languageRef = useRef<LanguageSheetRef>(null);
+
+  // Header entry animation
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(headerAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   /* ---------- KYC badge variant ---------- */
   const kycBadgeVariant = useCallback(() => {
@@ -188,7 +255,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   /* ---------- Handlers ---------- */
   const handleLogout = useCallback(() => {
-    Alert.alert('Log Out', 'Are you sure?', [
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Log Out',
@@ -201,177 +268,212 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     ]);
   }, [authStore]);
 
-  const showComingSoon = useCallback(() => {
-    Toast.show({ type: 'info', text1: 'Coming soon' });
-  }, []);
+  const isDark = mode === 'dark';
 
   return (
-    <ScreenWrapper headerTitle="Profile" scrollable={false}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+    <ScreenWrapper headerTitle="Profile" scrollable>
+      {/* ======== HERO HEADER ======== */}
+      <Animated.View
+        style={[
+          styles.heroHeader,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
       >
-        {/* ---- Hero Card ---- */}
-        <MotiView
-          from={{ opacity: 0, translateY: -12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 400 }}
-          style={styles.heroWrapper}
-        >
-          <View
+        <LinearGradient
+          colors={
+            isDark
+              ? ['#1A1408', '#0D0A04', 'transparent']
+              : ['#FEF3E0', '#FFF8ED', 'transparent']
+          }
+          style={styles.heroGradient}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+
+        {/* Avatar with gradient ring */}
+        <View style={styles.avatarArea}>
+          <LinearGradient
+            colors={['#C8850A', '#E8A830', '#C8850A']}
+            style={styles.avatarGradientRing}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={[styles.avatarInnerRing, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
+              <AppAvatar size={96} name={user?.name ?? 'U'} />
+            </View>
+          </LinearGradient>
+          <Pressable
+            onPress={() =>
+              Toast.show({ type: 'info', text1: 'Change Photo' })
+            }
             style={[
-              styles.heroCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
+              styles.cameraBadge,
+              {
+                backgroundColor: colors.primary,
+                borderColor: isDark ? '#111827' : '#FFFFFF',
+              },
             ]}
           >
-            <View style={styles.avatarContainer}>
-              <AppAvatar
-                size={80}
-                name={user?.name ?? 'U'}
-              />
-              <Pressable
-                onPress={() =>
-                  Toast.show({ type: 'info', text1: 'Change Photo' })
-                }
-                style={[
-                  styles.cameraOverlay,
-                  { backgroundColor: colors.primary },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="camera"
-                  size={14}
-                  color="#FFFFFF"
-                />
-              </Pressable>
-            </View>
+            <MaterialCommunityIcons name="camera" size={15} color="#FFFFFF" />
+          </Pressable>
+        </View>
 
-            <Text style={[styles.userName, { color: colors.text }]}>
-              {user?.name ?? 'User'}
-            </Text>
-            <Text style={[styles.userDetail, { color: colors.textSecondary }]}>
-              {maskPhone(user?.phone ?? '')}
-            </Text>
-            <Text style={[styles.userDetail, { color: colors.textSecondary }]}>
-              {maskEmail(user?.email ?? '')}
-            </Text>
+        {/* Name & details */}
+        <Text style={[styles.heroName, { color: colors.text }]}>
+          {user?.name ?? 'User'}
+        </Text>
+        <Text style={[styles.heroPhone, { color: colors.textSecondary }]}>
+          {maskPhone(user?.phone ?? '')}
+        </Text>
 
-            <View style={styles.kycBadgeRow}>
-              <AppBadge
-                variant={kycBadgeVariant()}
-                label={kycBadgeLabel()}
-              />
-            </View>
+        {/* KYC Badge */}
+        <View style={styles.kycRow}>
+          <AppBadge
+            variant={kycBadgeVariant()}
+            label={kycBadgeLabel()}
+          />
+        </View>
 
-            <Pressable
-              onPress={() => navigation.navigate('EditProfile')}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.editProfileBtn,
-                { backgroundColor: colors.primaryMuted },
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="pencil-outline"
-                size={14}
-                color={colors.primary}
-              />
-              <Text style={[styles.editProfileText, { color: colors.primary }]}>
-                Edit Profile
-              </Text>
-            </Pressable>
-          </View>
-        </MotiView>
-
-        {/* ---- Stats Row ---- */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 450, delay: 100 }}
-          style={[
-            styles.statsRow,
-            { backgroundColor: colors.card, borderColor: colors.border },
+        {/* Edit Profile */}
+        <Pressable
+          onPress={() => navigation.navigate('EditProfile')}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.editBtn,
+            {
+              backgroundColor: colors.primaryMuted,
+              borderColor: colors.primary + '30',
+            },
+            pressed && { opacity: 0.7 },
           ]}
         >
-          <StatColumn
-            icon="wallet-outline"
-            label="Total Loans"
-            value={String(loanStore.loans?.length ?? 0)}
+          <MaterialCommunityIcons
+            name="pencil-outline"
+            size={14}
+            color={colors.primary}
           />
-          <View
-            style={[styles.statSeparator, { backgroundColor: colors.border }]}
-          />
-          <StatColumn
-            icon="chart-line"
-            label="Credit Score"
-            value={String(user?.creditScore ?? '—')}
-            valueColor={creditScoreColor()}
-          />
-          <View
-            style={[styles.statSeparator, { backgroundColor: colors.border }]}
-          />
-          <StatColumn
-            icon="calendar-outline"
-            label="Member Since"
-            value="Mar 2026"
-          />
-        </MotiView>
+          <Text style={[styles.editBtnText, { color: colors.primary }]}>
+            Edit Profile
+          </Text>
+        </Pressable>
+      </Animated.View>
 
-        {/* ---- Account ---- */}
-        <SectionHeader title="ACCOUNT" />
+      {/* ======== STATS CARDS ======== */}
+      <View style={styles.statsGrid}>
+        <StatCard
+          icon="wallet-outline"
+          label="Total Loans"
+          value={String(loanStore.loans?.length ?? 0)}
+          colors={colors}
+          delay={100}
+        />
+        <StatCard
+          icon="chart-line"
+          label="Credit Score"
+          value={String(user?.creditScore ?? '—')}
+          valueColor={creditScoreColor()}
+          colors={colors}
+          delay={200}
+        />
+        <StatCard
+          icon="calendar-check-outline"
+          label="Member Since"
+          value="Mar 2026"
+          colors={colors}
+          delay={300}
+        />
+      </View>
+
+      {/* ======== ACCOUNT SECTION ======== */}
+      <SectionHeader title="ACCOUNT" colors={colors} />
+      <View style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <MenuItem
           icon="account-outline"
           label="Personal Info"
+          subtitle="Name, email, date of birth"
           onPress={() => navigation.navigate('EditProfile')}
+          colors={colors}
         />
         <MenuItem
           icon="shield-check-outline"
           label="KYC Documents"
+          subtitle="Identity verification"
           onPress={() => navigation.navigate('KYC')}
           rightElement={
             user?.kycStatus === 'verified' ? (
-              <View style={[styles.greenDot, { backgroundColor: colors.success }]} />
+              <View style={styles.verifiedRow}>
+                <View style={[styles.verifiedPill, { backgroundColor: colors.successMuted }]}>
+                  <MaterialCommunityIcons name="check-circle" size={12} color={colors.success} />
+                  <Text style={[styles.verifiedText, { color: colors.success }]}>Verified</Text>
+                </View>
+              </View>
             ) : undefined
           }
+          colors={colors}
         />
         <MenuItem
           icon="bank-outline"
           label="Bank Accounts"
-          onPress={showComingSoon}
+          subtitle="Linked accounts"
+          onPress={() => navigation.navigate('BankAccounts')}
+          colors={colors}
         />
         <MenuItem
           icon="credit-card-outline"
           label="Payment Methods"
-          onPress={showComingSoon}
+          subtitle="Cards & UPI"
+          onPress={() => navigation.navigate('PaymentMethods')}
+          isLast
+          colors={colors}
         />
+      </View>
 
-        {/* ---- Loans ---- */}
-        <SectionHeader title="LOANS" />
+      {/* ======== LOANS SECTION ======== */}
+      <SectionHeader title="LOANS" colors={colors} />
+      <View style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <MenuItem
           icon="file-document-outline"
           label="My Applications"
-          onPress={() =>
-            navigation.getParent()?.navigate('LoansTab')
-          }
+          onPress={() => navigation.getParent()?.navigate('LoansTab')}
+          colors={colors}
+        />
+        <MenuItem
+          icon="radar"
+          label="Track Application"
+          subtitle="Check your loan progress"
+          onPress={() => navigation.getParent()?.navigate('ApplyTab', { screen: 'TrackApplication', params: { fromTab: 'ProfileTab' } })}
+          colors={colors}
         />
         <MenuItem
           icon="file-download-outline"
           label="Loan Statements"
           onPress={() =>
-            Toast.show({ type: 'info', text1: 'Loan statements', text2: 'Coming soon' })
+            navigation.getParent()?.navigate('LoansTab', { screen: 'LoanStatement' })
           }
+          colors={colors}
         />
         <MenuItem
           icon="calendar-month-outline"
           label="EMI Calendar"
-          onPress={() =>
-            Toast.show({ type: 'info', text1: 'EMI Calendar', text2: 'Coming soon' })
-          }
+          onPress={() => navigation.navigate('EMICalendar')}
+          isLast
+          colors={colors}
         />
+      </View>
 
-        {/* ---- Settings ---- */}
-        <SectionHeader title="SETTINGS" />
+      {/* ======== SETTINGS SECTION ======== */}
+      <SectionHeader title="PREFERENCES" colors={colors} />
+      <View style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <MenuItem
           icon="bell-outline"
           label="Notifications"
@@ -382,6 +484,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
               onValueChange={setNotificationsEnabled}
             />
           }
+          colors={colors}
         />
         <MenuItem
           icon="weather-night"
@@ -393,11 +496,14 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
               onValueChange={() => themeStore.toggleTheme()}
             />
           }
+          colors={colors}
         />
         <MenuItem
           icon="translate"
           label="Language"
-          onPress={showComingSoon}
+          subtitle="English"
+          onPress={() => languageRef.current?.open()}
+          colors={colors}
         />
         <MenuItem
           icon="fingerprint"
@@ -409,18 +515,24 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
               onValueChange={setBiometricEnabled}
             />
           }
+          isLast
+          colors={colors}
         />
+      </View>
 
-        {/* ---- Support ---- */}
-        <SectionHeader title="SUPPORT" />
+      {/* ======== SUPPORT SECTION ======== */}
+      <SectionHeader title="SUPPORT" colors={colors} />
+      <View style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <MenuItem
           icon="help-circle-outline"
           label="Help & FAQ"
           onPress={() => navigation.navigate('Help')}
+          colors={colors}
         />
         <MenuItem
-          icon="phone-outline"
+          icon="headphones"
           label="Contact Us"
+          subtitle="1800-123-4567 (Toll Free)"
           onPress={() =>
             Toast.show({
               type: 'info',
@@ -428,6 +540,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
               text2: '1800-123-4567 (Toll Free)',
             })
           }
+          colors={colors}
         />
         <MenuItem
           icon="star-outline"
@@ -435,6 +548,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() =>
             Toast.show({ type: 'success', text1: 'Thanks for rating!' })
           }
+          colors={colors}
         />
         <MenuItem
           icon="information-outline"
@@ -445,23 +559,29 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
               'LendEase v1.0.0\nBuild 1\n\nA modern lending platform that makes borrowing simple, transparent, and fast.',
             )
           }
+          isLast
+          colors={colors}
         />
+      </View>
 
-        {/* ---- Log Out ---- */}
-        <View style={styles.logoutWrapper}>
-          <MenuItem
-            icon="logout"
-            label="Log Out"
-            onPress={handleLogout}
-            danger
-          />
-        </View>
+      {/* ======== LOG OUT ======== */}
+      <View style={[styles.menuCard, styles.logoutCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <MenuItem
+          icon="logout"
+          label="Log Out"
+          onPress={handleLogout}
+          danger
+          isLast
+          colors={colors}
+        />
+      </View>
 
-        {/* ---- Version ---- */}
-        <Text style={[styles.versionText, { color: colors.textMuted }]}>
-          v1.0.0 (Build 1)
-        </Text>
-      </ScrollView>
+      {/* ---- Version ---- */}
+      <Text style={[styles.versionText, { color: colors.textMuted }]}>
+        LendEase v1.0.0 (Build 1)
+      </Text>
+
+      <LanguageSheet ref={languageRef} />
     </ScreenWrapper>
   );
 };
@@ -473,145 +593,192 @@ export default ProfileScreen;
 /* ------------------------------------------------------------------ */
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 120,
-  },
-
-  /* Hero */
-  heroWrapper: {
-    marginHorizontal: 20,
-    marginTop: 8,
-  },
-  heroCard: {
-    borderRadius: 20,
-    padding: 24,
+  /* ===== Hero Header ===== */
+  heroHeader: {
     alignItems: 'center',
-    borderWidth: 1,
-  },
-  avatarContainer: {
+    paddingTop: 4,
+    paddingBottom: 18,
+    marginHorizontal: -20,
     position: 'relative',
   },
-  cameraOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    right: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+
+  /* Avatar */
+  avatarArea: {
+    position: 'relative',
+    marginBottom: 10,
+  },
+  avatarGradientRing: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
   },
-  userName: {
-    fontSize: 22,
+  avatarInnerRing: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+  },
+
+  /* Name area */
+  heroName: {
+    fontSize: 24,
     fontWeight: '700',
-    marginTop: 14,
-    letterSpacing: 0.2,
+    letterSpacing: -0.3,
   },
-  userDetail: {
+  heroPhone: {
     fontSize: 14,
-    marginTop: 3,
-    letterSpacing: 0.1,
+    marginTop: 2,
+    letterSpacing: 0.3,
   },
-  kycBadgeRow: {
+
+  /* KYC Badge */
+  kycRow: {
+    marginTop: 8,
+  },
+  editBtn: {
     marginTop: 10,
-  },
-  editProfileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
-    gap: 6,
+    gap: 5,
+    borderWidth: 1,
   },
-  editProfileText: {
+  editBtnText: {
     fontSize: 13,
     fontWeight: '600',
   },
 
-  /* Stats */
-  statsRow: {
+  /* ===== Stats Grid ===== */
+  statsGrid: {
     flexDirection: 'row',
-    marginTop: 16,
-    marginHorizontal: 20,
-    alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 4,
+    gap: 10,
+    marginTop: 4,
   },
-  statColumn: {
+  statCard: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  statIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  statCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '700',
+  statCardValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
-  statLabel: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  statSeparator: {
-    width: 1,
-    height: 40,
+  statCardLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 3,
+    letterSpacing: 0.2,
   },
 
-  /* Section */
+  /* ===== Section Headers ===== */
   sectionTitle: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: 1.5,
-    paddingHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 8,
+    marginTop: 28,
+    marginBottom: 10,
     textTransform: 'uppercase',
   },
 
-  /* Menu Item */
+  /* ===== Menu Card (grouped) ===== */
+  menuCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  logoutCard: {
+    marginTop: 28,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 14,
+    position: 'relative',
   },
-  menuIconContainer: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  menuIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuLabel: {
+  menuTextBlock: {
     flex: 1,
+    marginLeft: 14,
+  },
+  menuLabel: {
     fontSize: 15,
     fontWeight: '500',
-    marginLeft: 14,
+    letterSpacing: 0.1,
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+    letterSpacing: 0.1,
+  },
+  menuSeparator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 70,
+    right: 16,
+    height: StyleSheet.hairlineWidth,
+  },
+
+  /* Verified pill */
+  verifiedRow: {
+    flexDirection: 'row',
+  },
+  verifiedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  verifiedText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   /* Misc */
-  greenDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  logoutWrapper: {
-    marginTop: 20,
-  },
   versionText: {
     textAlign: 'center',
     fontSize: 12,
-    marginVertical: 16,
+    marginTop: 20,
+    marginBottom: 16,
     letterSpacing: 0.3,
   },
 });

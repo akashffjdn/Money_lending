@@ -1,12 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Text, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedReaction,
-  withTiming,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef, useState } from 'react';
+import { Text, StyleSheet, Animated, Easing, type StyleProp, type TextStyle } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 interface AnimatedCounterProps {
@@ -49,27 +42,29 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   style,
 }) => {
   const { colors } = useTheme();
-  const animatedValue = useSharedValue(0);
+  const animValue = useRef(new Animated.Value(0)).current;
   const [displayValue, setDisplayValue] = useState(0);
 
-  useAnimatedReaction(
-    () => {
+  useEffect(() => {
+    const listenerId = animValue.addListener(({ value: v }) => {
       if (decimalPlaces > 0) {
         const factor = Math.pow(10, decimalPlaces);
-        return Math.round(animatedValue.value * factor) / factor;
+        setDisplayValue(Math.round(v * factor) / factor);
+      } else {
+        setDisplayValue(Math.round(v));
       }
-      return Math.round(animatedValue.value);
-    },
-    (current) => {
-      runOnJS(setDisplayValue)(current);
-    },
-  );
+    });
 
-  useEffect(() => {
-    animatedValue.value = withTiming(value, {
+    Animated.timing(animValue, {
+      toValue: value,
       duration,
       easing: Easing.out(Easing.cubic),
-    });
+      useNativeDriver: false,
+    }).start();
+
+    return () => {
+      animValue.removeListener(listenerId);
+    };
   }, [value, duration]);
 
   const formattedValue = formatIndian(displayValue, decimalPlaces);

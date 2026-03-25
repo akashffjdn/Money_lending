@@ -1,11 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
@@ -27,40 +21,31 @@ interface ConnectorProps {
 }
 
 const Connector: React.FC<ConnectorProps> = ({ completed, active, colors }) => {
-  const fillWidth = useSharedValue(0);
+  const fillWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (completed) {
-      fillWidth.value = withTiming(1, {
-        duration: 400,
-        easing: Easing.out(Easing.cubic),
-      });
-    } else if (active) {
-      fillWidth.value = withTiming(0.5, {
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
-      });
-    } else {
-      fillWidth.value = withTiming(0, {
-        duration: 300,
-        easing: Easing.out(Easing.cubic),
-      });
-    }
+    const toValue = completed ? 1 : active ? 0.5 : 0;
+    Animated.timing(fillWidth, {
+      toValue,
+      duration: completed ? 400 : active ? 600 : 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
   }, [completed, active]);
 
-  const fillStyle = useAnimatedStyle(() => ({
-    width: `${fillWidth.value * 100}%` as any,
-  }));
-
   const fillColor = completed ? colors.success : colors.primary;
+
+  const widthInterpolation = fillWidth.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={[styles.connector, { backgroundColor: colors.border }]}>
       <Animated.View
         style={[
           styles.connectorFill,
-          { backgroundColor: fillColor },
-          fillStyle,
+          { backgroundColor: fillColor, width: widthInterpolation },
         ]}
       />
     </View>

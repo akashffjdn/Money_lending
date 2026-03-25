@@ -16,11 +16,13 @@ export type MainTabParamList = {
 export type HomeStackParamList = {
   Home: undefined;
   Notifications: undefined;
+  EMICalculator: undefined;
 };
 
 export type LoanStackParamList = {
   LoanList: undefined;
   LoanDetail: { loanId: string };
+  LoanStatement: { loanId?: string } | undefined;
 };
 
 export type PaymentStackParamList = {
@@ -34,8 +36,12 @@ export type ProfileStackParamList = {
   KYC: undefined;
   Help: undefined;
   Settings: undefined;
+  BankAccounts: undefined;
+  PaymentMethods: undefined;
+  EMICalendar: undefined;
 };
 
 export type ApplyStackParamList = {
   LoanApplication: undefined;
+  TrackApplication: { applicationId?: string; fromTab?: string } | undefined;
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  Animated,
   View,
   Text,
   Pressable,
@@ -8,19 +9,11 @@ import {
   Dimensions,
   StyleSheet,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  useAnimatedScrollHandler,
-  withRepeat,
-  withSequence,
-  withSpring,
-} from 'react-native-reanimated';
 import { MotiView } from '../../utils/MotiCompat';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -109,21 +102,20 @@ const isIncomingTransaction = (type: TransactionType): boolean => {
 
 // --- Notification Badge Pulse ---
 const NotificationBadge: React.FC = () => {
-  const pulseScale = useSharedValue(1);
+  const pulseScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    pulseScale.value = withRepeat(
-      withSequence(
-        withTiming(1.3, { duration: 600 }),
-        withTiming(1.0, { duration: 600 }),
-      ),
-      -1,
-    );
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseScale, { toValue: 1.3, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulseScale, { toValue: 1.0, duration: 600, useNativeDriver: true }),
+      ]),
+    ).start();
   }, [pulseScale]);
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }));
+  const pulseStyle = {
+    transform: [{ scale: pulseScale }],
+  };
 
   return (
     <Animated.View style={[styles.notifDot, pulseStyle]} />
@@ -142,18 +134,18 @@ interface QuickActionProps {
 }
 
 const QuickActionItem: React.FC<QuickActionProps> = ({ icon, label, color, index, onPress, surfaceBg, textMuted }) => {
-  const scale = useSharedValue(1);
+  const scale = useRef(new Animated.Value(1)).current;
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const animatedStyle = {
+    transform: [{ scale }],
+  };
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.9, { damping: 15, stiffness: 200 });
+    Animated.spring(scale, { toValue: 0.9, damping: 15, stiffness: 200, useNativeDriver: true }).start();
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 200 });
+    Animated.spring(scale, { toValue: 1, damping: 15, stiffness: 200, useNativeDriver: true }).start();
   };
 
   const handlePress = async () => {
@@ -240,14 +232,8 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   // Refs
   const promoListRef = useRef<FlatList<PromoItem>>(null);
 
-  // Scroll animation
-  const scrollY = useSharedValue(0);
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
+  // Scroll animation (scrollY tracked but not used for animated styles)
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   // Data
   const creditScore = user?.creditScore ?? 742;
@@ -289,8 +275,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   }, [loadLoans, loadPayments, loadNotifications]);
 
   // Navigation helpers
-  const navigateToTab = (tab: string) => {
-    navigation.getParent()?.navigate(tab as never);
+  const navigateToTab = (tab: string, params?: object) => {
+    if (params) {
+      (navigation.getParent()?.navigate as any)(tab, params);
+    } else {
+      navigation.getParent()?.navigate(tab as never);
+    }
   };
 
   // Quick actions data
@@ -314,7 +304,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       label: 'KYC',
       color: '#3B82F6',
       index: 2,
-      onPress: () => navigateToTab('ProfileTab'),
+      onPress: () => navigateToTab('ProfileTab', { screen: 'KYC' }),
     },
     {
       icon: 'calculator' as const,
@@ -323,6 +313,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       index: 3,
       onPress: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        navigation.navigate('EMICalculator');
       },
     },
   ];
@@ -342,17 +333,14 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       >
         <Pressable
           onPress={() => {
-            navigation.getParent()?.navigate('LoansTab' as never);
+            navigateToTab('LoansTab', { screen: 'LoanDetail', params: { loanId: item.id } });
           }}
           style={({ pressed }) => [
             styles.loanCard,
             {
               backgroundColor: colors.card,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.06,
-              shadowRadius: 12,
-              elevation: 3,
+              borderWidth: 1,
+              borderColor: colors.border,
               opacity: pressed ? 0.95 : 1,
             },
           ]}
@@ -576,8 +564,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       {loansLoading && loans.length === 0 ? (
         renderSkeleton()
       ) : (
-        <Animated.ScrollView
-          onScroll={scrollHandler}
+        <ScrollView
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
@@ -754,7 +741,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               ))}
             </View>
           </View>
-        </Animated.ScrollView>
+        </ScrollView>
       )}
     </View>
   );

@@ -1,5 +1,6 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import {
+  Animated,
   View,
   Text,
   StyleSheet,
@@ -11,15 +12,8 @@ import {
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Animated, {
-  FadeInRight,
-  FadeInDown,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
 import { MotiView } from '../../utils/MotiCompat';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
@@ -41,8 +35,16 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'KYC'>;
 type KYCView = 'overview' | 'step1' | 'step2' | 'step3' | 'step4' | 'step5' | 'complete';
 
 const STEP_NAMES = ['PAN Card', 'Aadhaar Card', 'Selfie Verification', 'Bank Statement', 'Address Proof'];
+const STEP_SUBTITLES = ['Instant verification', 'Takes 30 seconds', 'Quick face scan', 'Upload PDF', 'Final step'];
 const STEP_INDICATOR_LABELS = ['PAN', 'Aadhaar', 'Selfie', 'Bank', 'Address'];
-const STEP_ICONS = ['card-account-details-outline', 'card-account-details', 'face-recognition', 'bank-outline', 'map-marker-outline'];
+const STEP_ICONS: Array<keyof typeof MaterialCommunityIcons.glyphMap> = [
+  'card-account-details-outline',
+  'fingerprint',
+  'face-recognition',
+  'bank-outline',
+  'map-marker-radius-outline',
+];
+const STEP_COLORS = ['#8B5CF6', '#3B82F6', '#0EA5E9', '#F59E0B', '#22C55E'];
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
@@ -53,21 +55,51 @@ const ADDRESS_DOC_OPTIONS: { label: string; value: AddressDocType }[] = [
   { label: 'Voter ID', value: 'voter_id' },
 ];
 
+// ---------- Pulsing Dot for active step ----------
+const PulsingDot = memo(({ color }: { color: string }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(scale, { toValue: 1.8, duration: 1200, useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 0, duration: 1200, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0.4, duration: 1200, useNativeDriver: true }),
+        ]),
+      ]),
+    ).start();
+  }, [scale, opacity]);
+
+  return (
+    <View style={styles.pulsingDotContainer}>
+      <Animated.View
+        style={[
+          styles.pulsingRing,
+          { backgroundColor: color, transform: [{ scale }], opacity },
+        ]}
+      />
+      <View style={[styles.pulsingDotInner, { backgroundColor: color }]} />
+    </View>
+  );
+});
+
 // ---------- Selfie Scan Line Component ----------
 const ScanLine = memo(({ imageHeight, color }: { imageHeight: number; color: string }) => {
-  const translateY = useSharedValue(0);
+  const translateY = useRef(new Animated.Value(0)).current;
 
-  React.useEffect(() => {
-    translateY.value = withRepeat(
-      withTiming(imageHeight, { duration: 2000 }),
-      -1,
-      true,
-    );
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateY, { toValue: imageHeight, duration: 2000, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 2000, useNativeDriver: true }),
+      ]),
+    ).start();
   }, [imageHeight, translateY]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
 
   return (
     <Animated.View
@@ -80,7 +112,7 @@ const ScanLine = memo(({ imageHeight, color }: { imageHeight: number; color: str
           height: 2,
           backgroundColor: color,
         },
-        animatedStyle,
+        { transform: [{ translateY }] },
       ]}
     />
   );
@@ -110,7 +142,7 @@ const UploadCard = memo(
       style={({ pressed }) => [
         styles.uploadCard,
         { borderColor, backgroundColor: bgColor },
-        pressed && { opacity: 0.7 },
+        pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] },
       ]}
     >
       <View style={[styles.uploadIconCircle, { backgroundColor: `${iconColor}1A` }]}>
@@ -382,10 +414,7 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
   // ===================== RENDER HELPERS =====================
 
   const renderUploadRow = useCallback(
-    (
-      onCamera: () => void,
-      onGallery: () => void,
-    ) => (
+    (onCamera: () => void, onGallery: () => void) => (
       <View style={styles.uploadRow}>
         <UploadCard
           icon="camera"
@@ -412,18 +441,12 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderImagePreview = useCallback(
     (uri: string, onRetake: () => void, onContinue?: () => void) => (
-      <Animated.View entering={FadeInDown.duration(400)}>
+      <View>
         <View style={[styles.imagePreviewContainer, { borderColor: colors.success }]}>
-          <Image
-            source={{ uri }}
-            style={styles.imagePreview}
-            resizeMode="cover"
-          />
+          <Image source={{ uri }} style={styles.imagePreview} resizeMode="cover" />
           <View style={[styles.imagePreviewBadge, { backgroundColor: colors.successMuted }]}>
             <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
-            <Text style={[styles.imagePreviewBadgeText, { color: colors.success }]}>
-              Uploaded
-            </Text>
+            <Text style={[styles.imagePreviewBadgeText, { color: colors.success }]}>Uploaded</Text>
           </View>
         </View>
         <View style={styles.previewActions}>
@@ -436,7 +459,7 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           )}
         </View>
-      </Animated.View>
+      </View>
     ),
     [colors.success, colors.successMuted],
   );
@@ -444,135 +467,130 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
   // ===================== VIEW: OVERVIEW =====================
   const renderOverview = () => {
     const { overallStatus } = kycStore;
+    const completedCount = kycStore.steps.filter((s) => s.status === 'completed').length;
+    const totalSteps = kycStore.steps.length;
+    const progressPercent = (completedCount / totalSteps) * 100;
 
     const statusConfig: Record<
       string,
-      { bg: string; text: string; icon: string; label: string; description: string }
+      { gradient: [string, string]; icon: string; label: string; description: string }
     > = {
       verified: {
-        bg: colors.successMuted,
-        text: colors.success,
+        gradient: ['#16A34A', '#22C55E'],
         icon: 'shield-check',
         label: 'KYC Verified',
         description: 'Your identity has been verified successfully.',
       },
       under_review: {
-        bg: colors.warningMuted,
-        text: colors.warning,
+        gradient: ['#D97706', '#F59E0B'],
         icon: 'clock-outline',
         label: 'Under Review',
-        description: 'Your documents are being reviewed. This usually takes 24-48 hours.',
+        description: 'Your documents are being reviewed. Usually takes 24-48 hours.',
       },
       rejected: {
-        bg: colors.errorMuted,
-        text: colors.error,
+        gradient: ['#DC2626', '#EF4444'],
         icon: 'alert-circle',
         label: 'Verification Rejected',
         description: 'Some documents were rejected. Please re-upload them.',
       },
       not_started: {
-        bg: colors.infoMuted,
-        text: colors.info,
-        icon: 'information',
-        label: 'Verification Pending',
-        description: 'Complete your KYC to access all features.',
+        gradient: ['#C8850A', '#E8A830'],
+        icon: 'shield-alert-outline',
+        label: 'Verify Your Identity',
+        description: 'Complete KYC to unlock all features & start transacting.',
       },
       in_progress: {
-        bg: colors.infoMuted,
-        text: colors.info,
-        icon: 'information',
-        label: 'In Progress',
-        description: 'Continue your verification to unlock all features.',
+        gradient: ['#C8850A', '#E8A830'],
+        icon: 'shield-half-full',
+        label: 'Almost There!',
+        description: 'Continue verification to unlock all features.',
       },
     };
 
     const config = statusConfig[overallStatus] || statusConfig.not_started;
 
-    const getStepCircleStyle = (status: string) => {
+    const getStepStatus = (status: string) => {
       switch (status) {
         case 'completed':
-          return { backgroundColor: colors.success };
+          return { badge: 'Verified', badgeBg: 'rgba(34, 197, 94, 0.12)', badgeColor: '#22C55E', iconName: 'check-circle' as const };
         case 'in_progress':
-          return { backgroundColor: colors.warning };
+          return { badge: 'Continue', badgeBg: 'rgba(200, 133, 10, 0.12)', badgeColor: '#C8850A', iconName: 'arrow-right-circle' as const };
         case 'rejected':
-          return { backgroundColor: colors.error };
+          return { badge: 'Retry', badgeBg: 'rgba(239, 68, 68, 0.12)', badgeColor: '#EF4444', iconName: 'refresh-circle' as const };
         default:
-          return { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.border };
-      }
-    };
-
-    const getStepLineStyle = (status: string) => {
-      switch (status) {
-        case 'completed':
-          return { backgroundColor: colors.success };
-        case 'in_progress':
-          return { backgroundColor: colors.warning, borderStyle: 'dashed' as const };
-        default:
-          return { backgroundColor: colors.border, borderStyle: 'dashed' as const };
-      }
-    };
-
-    const getStepStatusText = (status: string) => {
-      switch (status) {
-        case 'completed':
-          return { text: 'Completed', color: colors.success };
-        case 'in_progress':
-          return { text: 'In Progress', color: colors.warning };
-        case 'rejected':
-          return { text: 'Rejected', color: colors.error };
-        default:
-          return { text: 'Not Started', color: colors.textMuted };
+          return { badge: 'Pending', badgeBg: `${colors.textMuted}14`, badgeColor: colors.textMuted, iconName: 'chevron-right' as const };
       }
     };
 
     return (
       <View style={styles.viewContainer}>
-        {/* Status Banner */}
-        <Animated.View
-          entering={FadeInDown.duration(500)}
-          style={[
-            styles.statusBanner,
-            { backgroundColor: config.bg },
-          ]}
+        {/* ---- Hero Status Card with Gradient ---- */}
+        <MotiView
+          from={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: 500 }}
         >
-          <View style={styles.statusRow}>
-            <View style={[styles.statusIconCircle, { backgroundColor: `${config.text}1A` }]}>
-              <MaterialCommunityIcons
-                name={config.icon as any}
-                size={24}
-                color={config.text}
-              />
+          <LinearGradient
+            colors={config.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroCard}
+          >
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroIconWrap}>
+                <MaterialCommunityIcons name={config.icon as any} size={28} color="#FFFFFF" />
+              </View>
+              <View style={styles.heroTextWrap}>
+                <Text style={styles.heroLabel}>{config.label}</Text>
+                <Text style={styles.heroDescription}>{config.description}</Text>
+              </View>
             </View>
-            <View style={styles.statusTextContainer}>
-              <Text style={[styles.statusLabel, { color: config.text }]}>
-                {config.label}
-              </Text>
-              <Text style={[styles.statusDescription, { color: config.text }]}>
-                {config.description}
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
 
-        {/* Vertical Timeline */}
-        <View style={[styles.timelineCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.timelineTitle, { color: colors.textMuted }]}>
-            VERIFICATION STEPS
-          </Text>
+            {/* Progress bar */}
+            <View style={styles.heroProgressSection}>
+              <View style={styles.heroProgressHeader}>
+                <Text style={styles.heroProgressLabel}>
+                  {completedCount} of {totalSteps} completed
+                </Text>
+                <Text style={styles.heroProgressPercent}>{Math.round(progressPercent)}%</Text>
+              </View>
+              <View style={styles.heroProgressTrack}>
+                <View style={[styles.heroProgressFill, { width: `${progressPercent}%` }]} />
+              </View>
+            </View>
+          </LinearGradient>
+        </MotiView>
+
+        {/* ---- RBI compliance note ---- */}
+        <MotiView
+          from={{ opacity: 0, translateY: 10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 400, delay: 200 }}
+        >
+          <View style={[styles.complianceNote, { backgroundColor: colors.infoMuted }]}>
+            <MaterialCommunityIcons name="shield-lock-outline" size={16} color={colors.info} />
+            <Text style={[styles.complianceText, { color: colors.info }]}>
+              KYC is mandatory as per RBI guidelines. Your data is encrypted & secure.
+            </Text>
+          </View>
+        </MotiView>
+
+        {/* ---- Step Cards ---- */}
+        <View style={styles.stepsSection}>
           {kycStore.steps.map((step, index) => {
-            const circleStyle = getStepCircleStyle(step.status);
-            const lineStyle = getStepLineStyle(step.status);
-            const statusText = getStepStatusText(step.status);
-            const isLast = index === kycStore.steps.length - 1;
-            const canNavigate =
-              step.status !== 'completed' && index <= kycStore.currentStep;
+            const stepColor = STEP_COLORS[index];
+            const status = getStepStatus(step.status);
+            const isCompleted = step.status === 'completed';
+            const isCurrent = index === kycStore.currentStep && step.status !== 'completed';
+            const isLocked = index > kycStore.currentStep && step.status !== 'completed';
+            const canNavigate = step.status !== 'completed' && index <= kycStore.currentStep;
 
             return (
               <MotiView
                 key={step.id}
-                from={{ opacity: 0, translateX: -20 }}
-                animate={{ opacity: 1, translateX: 0 }}
-                transition={{ type: 'timing', duration: 400, delay: index * 100 }}
+                from={{ opacity: 0, translateY: 20 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: 'timing', duration: 450, delay: 300 + index * 80 }}
               >
                 <Pressable
                   onPress={() => {
@@ -581,53 +599,62 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
                       setCurrentView(`step${index + 1}` as KYCView);
                     }
                   }}
-                  disabled={!canNavigate}
+                  disabled={isLocked}
                   style={({ pressed }) => [
-                    styles.timelineStep,
-                    pressed && canNavigate && { backgroundColor: colors.surfaceHover },
+                    styles.stepCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: isCurrent ? stepColor : colors.border,
+                      borderWidth: isCurrent ? 1.5 : 1,
+                      opacity: isLocked ? 0.55 : 1,
+                    },
+                    isCurrent && {
+                      shadowColor: stepColor,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 12,
+                      elevation: 4,
+                    },
+                    pressed && canNavigate && { transform: [{ scale: 0.98 }] },
                   ]}
                 >
-                  {/* Left Column */}
-                  <View style={styles.timelineLeft}>
-                    <View style={[styles.timelineCircle, circleStyle]}>
-                      {step.status === 'completed' ? (
-                        <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
-                      ) : step.status === 'rejected' ? (
-                        <MaterialCommunityIcons name="close" size={16} color="#FFFFFF" />
-                      ) : (
-                        <MaterialCommunityIcons
-                          name={STEP_ICONS[index] as any}
-                          size={14}
-                          color={
-                            step.status === 'in_progress'
-                              ? '#FFFFFF'
-                              : colors.textMuted
-                          }
-                        />
-                      )}
-                    </View>
-                    {!isLast && (
-                      <View style={[styles.timelineLine, lineStyle]} />
+                  {/* Left: Icon container */}
+                  <View style={[styles.stepIconContainer, { backgroundColor: `${stepColor}14` }]}>
+                    {isCompleted ? (
+                      <View style={[styles.stepIconCompleted, { backgroundColor: '#22C55E' }]}>
+                        <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
+                      </View>
+                    ) : isCurrent ? (
+                      <PulsingDot color={stepColor} />
+                    ) : (
+                      <MaterialCommunityIcons name={STEP_ICONS[index]} size={22} color={isLocked ? colors.textMuted : stepColor} />
                     )}
                   </View>
 
-                  {/* Right Column */}
-                  <View style={styles.timelineRight}>
-                    <Text style={[styles.timelineStepName, { color: colors.text }]}>
+                  {/* Middle: Text */}
+                  <View style={styles.stepTextWrap}>
+                    <Text style={[styles.stepName, { color: isLocked ? colors.textMuted : colors.text }]}>
                       {STEP_NAMES[index]}
                     </Text>
-                    <Text style={[styles.timelineStatus, { color: statusText.color }]}>
-                      {statusText.text}
+                    <Text style={[styles.stepSubtitle, { color: isLocked ? colors.textMuted : colors.textSecondary }]}>
+                      {isCompleted ? 'Verified successfully' : STEP_SUBTITLES[index]}
                     </Text>
                   </View>
 
-                  {/* Chevron */}
-                  {canNavigate && (
-                    <MaterialCommunityIcons
-                      name="chevron-right"
-                      size={20}
-                      color={colors.textMuted}
-                    />
+                  {/* Right: Status badge or lock */}
+                  {isLocked ? (
+                    <View style={[styles.stepBadge, { backgroundColor: `${colors.textMuted}14` }]}>
+                      <MaterialCommunityIcons name="lock" size={14} color={colors.textMuted} />
+                    </View>
+                  ) : (
+                    <View style={[styles.stepBadge, { backgroundColor: status.badgeBg }]}>
+                      {isCompleted ? (
+                        <MaterialCommunityIcons name="check-circle" size={14} color={status.badgeColor} />
+                      ) : null}
+                      <Text style={[styles.stepBadgeText, { color: status.badgeColor }]}>
+                        {status.badge}
+                      </Text>
+                    </View>
                   )}
                 </Pressable>
               </MotiView>
@@ -635,13 +662,31 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
           })}
         </View>
 
-        {/* Continue Button */}
+        {/* ---- Trust Signal ---- */}
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ type: 'timing', duration: 400, delay: 800 }}
+        >
+          <View style={styles.trustRow}>
+            <MaterialCommunityIcons name="lock-check" size={14} color={colors.textMuted} />
+            <Text style={[styles.trustText, { color: colors.textMuted }]}>
+              256-bit encrypted  |  ISO 27001 certified
+            </Text>
+          </View>
+        </MotiView>
+
+        {/* ---- CTA Button ---- */}
         <View style={styles.bottomAction}>
           <AppButton
-            title="Continue Verification"
+            title={completedCount === 0 ? 'Start Verification' : completedCount === totalSteps ? 'View Status' : 'Continue Verification'}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setCurrentView(getFirstIncompleteStep());
+              if (completedCount === totalSteps) {
+                setCurrentView('complete');
+              } else {
+                setCurrentView(getFirstIncompleteStep());
+              }
             }}
             fullWidth
           />
@@ -650,59 +695,95 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  // ===================== SHARED STEP RENDERER =====================
+  const renderStepHeader = (stepIndex: number, title: string, subtitle: string) => {
+    const color = STEP_COLORS[stepIndex];
+    const icon = STEP_ICONS[stepIndex];
+    return (
+      <MotiView
+        from={{ opacity: 0, translateY: -10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 400 }}
+      >
+        <LinearGradient
+          colors={[`${color}18`, `${color}06`]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.stepHeroCard}
+        >
+          <View style={[styles.stepHeroIconWrap, { backgroundColor: `${color}20` }]}>
+            <MaterialCommunityIcons name={icon} size={30} color={color} />
+          </View>
+          <Text style={[styles.stepHeroTitle, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.stepHeroSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+        </LinearGradient>
+      </MotiView>
+    );
+  };
+
   // ===================== VIEW: STEP 1 — PAN =====================
   const renderStep1 = () => (
     <View style={styles.viewContainer}>
       <StepIndicator steps={STEP_INDICATOR_LABELS} currentStep={0} />
 
-      <Animated.View entering={FadeInRight.duration(400)} style={styles.stepContent}>
-        <Text style={[styles.stepTitle, { color: colors.text }]}>PAN Card Verification</Text>
-        <Text style={[styles.stepSubtitle, { color: colors.textMuted }]}>
-          Enter your PAN number and upload a photo of your card
-        </Text>
+      <View style={styles.stepContent}>
+        {renderStepHeader(0, 'Verify your PAN', 'Enter your PAN number and upload a clear photo of your card')}
 
-        <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <AppInput
-            label="PAN Number"
-            value={panNumber}
-            onChangeText={(text) => {
-              setPanNumber(text.toUpperCase());
-              setPanError('');
-            }}
-            autoCapitalize="characters"
-            maxLength={10}
-            error={panError}
-            placeholder="ABCDE1234F"
-            showCharCount
-          />
-        </View>
+        <MotiView
+          from={{ opacity: 0, translateY: 15 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 400, delay: 150 }}
+        >
+          <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <AppInput
+              label="PAN Number"
+              value={panNumber}
+              onChangeText={(text) => {
+                setPanNumber(text.toUpperCase());
+                setPanError('');
+              }}
+              autoCapitalize="characters"
+              maxLength={10}
+              error={panError}
+              placeholder="ABCDE1234F"
+              showCharCount
+              leftIcon={<MaterialCommunityIcons name="card-account-details-outline" size={20} />}
+            />
+          </View>
+        </MotiView>
 
-        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>UPLOAD PAN CARD</Text>
+        <MotiView
+          from={{ opacity: 0, translateY: 15 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 400, delay: 250 }}
+        >
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>UPLOAD PAN CARD</Text>
 
-        {!panImage ? (
-          renderUploadRow(
-            async () => {
-              const uri = await pickFromCamera();
-              if (uri) setPanImage(uri);
-            },
-            async () => {
-              const uri = await pickFromGallery();
-              if (uri) setPanImage(uri);
-            },
-          )
-        ) : (
-          renderImagePreview(panImage, () => setPanImage(undefined))
-        )}
+          {!panImage ? (
+            renderUploadRow(
+              async () => {
+                const uri = await pickFromCamera();
+                if (uri) setPanImage(uri);
+              },
+              async () => {
+                const uri = await pickFromGallery();
+                if (uri) setPanImage(uri);
+              },
+            )
+          ) : (
+            renderImagePreview(panImage, () => setPanImage(undefined))
+          )}
+        </MotiView>
 
         <View style={styles.bottomAction}>
           <AppButton
-            title="Next"
+            title="Verify & Continue"
             onPress={handleStep1Next}
             fullWidth
             disabled={!panNumber || !panImage}
           />
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 
@@ -711,70 +792,92 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.viewContainer}>
       <StepIndicator steps={STEP_INDICATOR_LABELS} currentStep={1} />
 
-      <Animated.View entering={FadeInRight.duration(400)} style={styles.stepContent}>
-        <Text style={[styles.stepTitle, { color: colors.text }]}>Aadhaar Card Verification</Text>
-        <Text style={[styles.stepSubtitle, { color: colors.textMuted }]}>
-          Enter your Aadhaar number and upload both sides
-        </Text>
+      <View style={styles.stepContent}>
+        {renderStepHeader(1, 'Verify your Aadhaar', 'Enter your Aadhaar number and upload both sides of your card')}
 
-        <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <AppInput
-            label="Aadhaar Number"
-            value={aadhaarNumber}
-            onChangeText={handleAadhaarChange}
-            keyboardType="numeric"
-            maxLength={14}
-            error={aadhaarError}
-            placeholder="XXXX XXXX XXXX"
-            showCharCount
-          />
-        </View>
+        <MotiView
+          from={{ opacity: 0, translateY: 15 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 400, delay: 150 }}
+        >
+          <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <AppInput
+              label="Aadhaar Number"
+              value={aadhaarNumber}
+              onChangeText={handleAadhaarChange}
+              keyboardType="numeric"
+              maxLength={14}
+              error={aadhaarError}
+              placeholder="XXXX XXXX XXXX"
+              showCharCount
+              leftIcon={<MaterialCommunityIcons name="fingerprint" size={20} />}
+            />
+          </View>
+        </MotiView>
 
-        {/* Front Side */}
-        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>FRONT SIDE</Text>
-        {!aadhaarFront ? (
-          renderUploadRow(
-            async () => {
-              const uri = await pickFromCamera();
-              if (uri) setAadhaarFront(uri);
-            },
-            async () => {
-              const uri = await pickFromGallery();
-              if (uri) setAadhaarFront(uri);
-            },
-          )
-        ) : (
-          renderImagePreview(aadhaarFront, () => setAadhaarFront(undefined))
-        )}
+        <MotiView
+          from={{ opacity: 0, translateY: 15 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 400, delay: 250 }}
+        >
+          <View style={[styles.uploadSectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.uploadSectionTitle, { color: colors.text }]}>Front Side</Text>
+            <Text style={[styles.uploadSectionHint, { color: colors.textMuted }]}>Photo with name & Aadhaar number visible</Text>
+            <View style={{ marginTop: 12 }}>
+              {!aadhaarFront ? (
+                renderUploadRow(
+                  async () => {
+                    const uri = await pickFromCamera();
+                    if (uri) setAadhaarFront(uri);
+                  },
+                  async () => {
+                    const uri = await pickFromGallery();
+                    if (uri) setAadhaarFront(uri);
+                  },
+                )
+              ) : (
+                renderImagePreview(aadhaarFront, () => setAadhaarFront(undefined))
+              )}
+            </View>
+          </View>
+        </MotiView>
 
-        {/* Back Side */}
-        <Text style={[styles.sectionLabel, { color: colors.textMuted, marginTop: 8 }]}>
-          BACK SIDE
-        </Text>
-        {!aadhaarBack ? (
-          renderUploadRow(
-            async () => {
-              const uri = await pickFromCamera();
-              if (uri) setAadhaarBack(uri);
-            },
-            async () => {
-              const uri = await pickFromGallery();
-              if (uri) setAadhaarBack(uri);
-            },
-          )
-        ) : (
-          renderImagePreview(aadhaarBack, () => setAadhaarBack(undefined))
-        )}
+        <MotiView
+          from={{ opacity: 0, translateY: 15 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 400, delay: 350 }}
+        >
+          <View style={[styles.uploadSectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.uploadSectionTitle, { color: colors.text }]}>Back Side</Text>
+            <Text style={[styles.uploadSectionHint, { color: colors.textMuted }]}>Photo with address details visible</Text>
+            <View style={{ marginTop: 12 }}>
+              {!aadhaarBack ? (
+                renderUploadRow(
+                  async () => {
+                    const uri = await pickFromCamera();
+                    if (uri) setAadhaarBack(uri);
+                  },
+                  async () => {
+                    const uri = await pickFromGallery();
+                    if (uri) setAadhaarBack(uri);
+                  },
+                )
+              ) : (
+                renderImagePreview(aadhaarBack, () => setAadhaarBack(undefined))
+              )}
+            </View>
+          </View>
+        </MotiView>
 
         <View style={styles.bottomAction}>
           <AppButton
-            title="Next"
+            title="Verify & Continue"
             onPress={handleStep2Next}
             fullWidth
             disabled={!aadhaarNumber || !aadhaarFront || !aadhaarBack}
           />
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 
@@ -783,82 +886,93 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.viewContainer}>
       <StepIndicator steps={STEP_INDICATOR_LABELS} currentStep={2} />
 
-      <Animated.View entering={FadeInRight.duration(400)} style={styles.stepContent}>
-        <Text style={[styles.stepTitle, { color: colors.text }]}>Selfie Verification</Text>
-        <Text style={[styles.stepSubtitle, { color: colors.textMuted }]}>
-          Take a clear selfie for identity matching
-        </Text>
+      <View style={styles.stepContent}>
+        {renderStepHeader(2, 'Take a Selfie', 'We need a clear photo of your face for identity matching')}
 
         {!selfieImage ? (
           <>
-            <View style={[styles.selfieCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.selfieIconCircle, { backgroundColor: colors.primaryMuted }]}>
-                <MaterialCommunityIcons
-                  name="face-recognition"
-                  size={40}
-                  color={colors.primary}
-                />
-              </View>
-
-              <View style={styles.tipsContainer}>
-                {[
-                  { icon: 'lightbulb-on-outline', text: 'Good lighting', color: colors.warning },
-                  { icon: 'glasses', text: 'Remove glasses', color: colors.info },
-                  { icon: 'camera-front', text: 'Face camera directly', color: colors.success },
-                ].map((tip) => (
-                  <View key={tip.text} style={styles.tipRow}>
-                    <View style={[styles.tipIconCircle, { backgroundColor: `${tip.color}1A` }]}>
-                      <MaterialCommunityIcons name={tip.icon as any} size={16} color={tip.color} />
-                    </View>
-                    <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-                      {tip.text}
-                    </Text>
+            <MotiView
+              from={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'timing', duration: 450, delay: 200 }}
+            >
+              <View style={[styles.selfieCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                {/* Face scan area */}
+                <View style={styles.selfieScanArea}>
+                  <View style={[styles.selfieScanCircle, { borderColor: `${STEP_COLORS[2]}40` }]}>
+                    <MaterialCommunityIcons name="face-recognition" size={52} color={STEP_COLORS[2]} />
                   </View>
-                ))}
-              </View>
-            </View>
+                  {/* Corner brackets */}
+                  <View style={[styles.cornerBracket, styles.cornerTL, { borderColor: STEP_COLORS[2] }]} />
+                  <View style={[styles.cornerBracket, styles.cornerTR, { borderColor: STEP_COLORS[2] }]} />
+                  <View style={[styles.cornerBracket, styles.cornerBL, { borderColor: STEP_COLORS[2] }]} />
+                  <View style={[styles.cornerBracket, styles.cornerBR, { borderColor: STEP_COLORS[2] }]} />
+                </View>
 
-            <AppButton
-              title="Take Selfie"
-              onPress={async () => {
-                const uri = await pickFromCamera(ImagePicker.CameraType.front);
-                if (uri) setSelfieImage(uri);
-              }}
-              fullWidth
-            />
+                <View style={styles.tipsContainer}>
+                  {[
+                    { icon: 'lightbulb-on-outline' as const, text: 'Ensure good lighting', color: '#F59E0B' },
+                    { icon: 'glasses' as const, text: 'Remove glasses & caps', color: '#3B82F6' },
+                    { icon: 'camera-front' as const, text: 'Face the camera directly', color: '#22C55E' },
+                  ].map((tip, idx) => (
+                    <MotiView
+                      key={tip.text}
+                      from={{ opacity: 0, translateX: -10 }}
+                      animate={{ opacity: 1, translateX: 0 }}
+                      transition={{ type: 'timing', duration: 300, delay: 400 + idx * 100 }}
+                    >
+                      <View style={styles.tipRow}>
+                        <View style={[styles.tipIconCircle, { backgroundColor: `${tip.color}14` }]}>
+                          <MaterialCommunityIcons name={tip.icon} size={16} color={tip.color} />
+                        </View>
+                        <Text style={[styles.tipText, { color: colors.textSecondary }]}>{tip.text}</Text>
+                      </View>
+                    </MotiView>
+                  ))}
+                </View>
+              </View>
+            </MotiView>
+
+            <View style={{ marginTop: 4 }}>
+              <AppButton
+                title="Open Camera"
+                onPress={async () => {
+                  const uri = await pickFromCamera(ImagePicker.CameraType.front);
+                  if (uri) setSelfieImage(uri);
+                }}
+                fullWidth
+              />
+            </View>
           </>
         ) : (
-          <Animated.View entering={FadeInDown.duration(400)} style={styles.selfiePreviewContainer}>
-            <View style={[styles.selfiePreviewWrapper, { borderColor: colors.primary }]}>
-              <Image
-                source={{ uri: selfieImage }}
-                style={styles.selfiePreview}
-                resizeMode="cover"
-              />
-              <ScanLine imageHeight={200} color={colors.primary} />
-            </View>
+          <MotiView
+            from={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', damping: 15 }}
+          >
+            <View style={styles.selfiePreviewContainer}>
+              <View style={[styles.selfiePreviewWrapper, { borderColor: STEP_COLORS[2] }]}>
+                <Image source={{ uri: selfieImage }} style={styles.selfiePreview} resizeMode="cover" />
+                <ScanLine imageHeight={200} color={STEP_COLORS[2]} />
+              </View>
 
-            <View style={styles.previewActions}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <AppButton
-                  title="Retake"
-                  variant="secondary"
-                  onPress={() => setSelfieImage(undefined)}
-                  fullWidth
-                />
+              <View style={[styles.selfieMatchBadge, { backgroundColor: `${STEP_COLORS[2]}14` }]}>
+                <MaterialCommunityIcons name="check-circle" size={16} color={STEP_COLORS[2]} />
+                <Text style={[styles.selfieMatchText, { color: STEP_COLORS[2] }]}>Photo captured</Text>
               </View>
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <AppButton
-                  title="Confirm"
-                  variant="primary"
-                  onPress={handleStep3Next}
-                  fullWidth
-                />
+
+              <View style={styles.previewActions}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <AppButton title="Retake" variant="secondary" onPress={() => setSelfieImage(undefined)} fullWidth />
+                </View>
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <AppButton title="Confirm" variant="primary" onPress={handleStep3Next} fullWidth />
+                </View>
               </View>
             </View>
-          </Animated.View>
+          </MotiView>
         )}
-      </Animated.View>
+      </View>
     </View>
   );
 
@@ -867,11 +981,8 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.viewContainer}>
       <StepIndicator steps={STEP_INDICATOR_LABELS} currentStep={3} />
 
-      <Animated.View entering={FadeInRight.duration(400)} style={styles.stepContent}>
-        <Text style={[styles.stepTitle, { color: colors.text }]}>Upload Bank Statement</Text>
-        <Text style={[styles.stepSubtitle, { color: colors.textMuted }]}>
-          Last 3 months statement in PDF format
-        </Text>
+      <View style={styles.stepContent}>
+        {renderStepHeader(3, 'Upload Bank Statement', 'Upload last 3 months statement in PDF format')}
 
         <Pressable
           onPress={handlePickDocument}
@@ -881,38 +992,29 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
               borderColor: bankStatement ? colors.success : colors.border,
               backgroundColor: bankStatement ? colors.successMuted : colors.surface,
             },
-            pressed && { opacity: 0.7 },
+            pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
           ]}
         >
           {!bankStatement ? (
             <View style={styles.documentUploadContent}>
               <View style={[styles.docIconCircle, { backgroundColor: colors.errorMuted }]}>
-                <MaterialCommunityIcons name="file-pdf-box" size={28} color={colors.error} />
+                <MaterialCommunityIcons name="file-pdf-box" size={32} color={colors.error} />
               </View>
-              <Text style={[styles.documentUploadText, { color: colors.text }]}>
-                Tap to upload PDF
-              </Text>
-              <Text style={[styles.documentUploadHint, { color: colors.textMuted }]}>
-                Max file size: 10MB
-              </Text>
+              <Text style={[styles.documentUploadText, { color: colors.text }]}>Tap to upload PDF</Text>
+              <Text style={[styles.documentUploadHint, { color: colors.textMuted }]}>Max file size: 10MB</Text>
             </View>
           ) : (
             <View style={styles.documentUploadContent}>
               <View style={[styles.docIconCircle, { backgroundColor: colors.successMuted }]}>
-                <MaterialCommunityIcons name="file-pdf-box" size={28} color={colors.success} />
+                <MaterialCommunityIcons name="file-check-outline" size={32} color={colors.success} />
               </View>
-              <Text
-                style={[styles.documentUploadText, { color: colors.text }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.documentUploadText, { color: colors.text }]} numberOfLines={1}>
                 {bankStatementName || 'Document uploaded'}
               </Text>
-              <MaterialCommunityIcons
-                name="check-circle"
-                size={22}
-                color={colors.success}
-                style={{ marginTop: 4 }}
-              />
+              <View style={[styles.uploadSuccessBadge, { backgroundColor: colors.successMuted }]}>
+                <MaterialCommunityIcons name="check-circle" size={14} color={colors.success} />
+                <Text style={[styles.uploadSuccessText, { color: colors.success }]}>Uploaded</Text>
+              </View>
             </View>
           )}
         </Pressable>
@@ -933,14 +1035,9 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         <View style={styles.bottomAction}>
-          <AppButton
-            title="Next"
-            onPress={handleStep4Next}
-            fullWidth
-            disabled={!bankStatement}
-          />
+          <AppButton title="Next" onPress={handleStep4Next} fullWidth disabled={!bankStatement} />
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 
@@ -949,19 +1046,16 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.viewContainer}>
       <StepIndicator steps={STEP_INDICATOR_LABELS} currentStep={4} />
 
-      <Animated.View entering={FadeInRight.duration(400)} style={styles.stepContent}>
-        <Text style={[styles.stepTitle, { color: colors.text }]}>Address Proof</Text>
-        <Text style={[styles.stepSubtitle, { color: colors.textMuted }]}>
-          Select document type and provide your address
-        </Text>
+      <View style={styles.stepContent}>
+        {renderStepHeader(4, 'Address Proof', 'Final step! Select document type and provide your address')}
 
-        {/* Document Type Selector */}
         <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>DOCUMENT TYPE</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.chipRow}
           contentContainerStyle={styles.chipRowContent}
+          keyboardShouldPersistTaps="handled"
         >
           {ADDRESS_DOC_OPTIONS.map((opt) => (
             <View key={opt.value} style={{ marginRight: 8 }}>
@@ -974,10 +1068,7 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
           ))}
         </ScrollView>
 
-        {/* Upload Section */}
-        <Text style={[styles.sectionLabel, { color: colors.textMuted, marginTop: 12 }]}>
-          UPLOAD DOCUMENT
-        </Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMuted, marginTop: 12 }]}>UPLOAD DOCUMENT</Text>
         {!addressDocImage ? (
           renderUploadRow(
             async () => {
@@ -993,55 +1084,21 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
           renderImagePreview(addressDocImage, () => setAddressDocImage(undefined))
         )}
 
-        {/* Address Form */}
-        <Text style={[styles.sectionLabel, { color: colors.textMuted, marginTop: 8 }]}>
-          ADDRESS DETAILS
-        </Text>
-
+        <Text style={[styles.sectionLabel, { color: colors.textMuted, marginTop: 8 }]}>ADDRESS DETAILS</Text>
         <View style={[styles.addressFormCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <AppInput
-            label="Address Line 1 *"
-            value={addressLine1}
-            onChangeText={setAddressLine1}
-            placeholder="House no, Street name"
-          />
-
+          <AppInput label="Address Line 1 *" value={addressLine1} onChangeText={setAddressLine1} placeholder="House no, Street name" />
           <View style={styles.addressFieldGap} />
-          <AppInput
-            label="Address Line 2"
-            value={addressLine2}
-            onChangeText={setAddressLine2}
-            placeholder="Area, Landmark"
-          />
-
+          <AppInput label="Address Line 2" value={addressLine2} onChangeText={setAddressLine2} placeholder="Area, Landmark" />
           <View style={styles.addressFieldGap} />
-          <AppInput
-            label="Pincode *"
-            value={pincode}
-            onChangeText={handlePincodeChange}
-            keyboardType="numeric"
-            maxLength={6}
-            placeholder="6-digit pincode"
-          />
-
+          <AppInput label="Pincode *" value={pincode} onChangeText={handlePincodeChange} keyboardType="numeric" maxLength={6} placeholder="6-digit pincode" />
           <View style={styles.addressFieldGap} />
           <View style={styles.cityStateRow}>
             <View style={styles.cityStateField}>
-              <AppInput
-                label="City *"
-                value={city}
-                onChangeText={setCity}
-                placeholder="City"
-              />
+              <AppInput label="City *" value={city} onChangeText={setCity} placeholder="City" />
             </View>
             <View style={styles.cityStateGap} />
             <View style={styles.cityStateField}>
-              <AppInput
-                label="State *"
-                value={stateName}
-                onChangeText={setStateName}
-                placeholder="State"
-              />
+              <AppInput label="State *" value={stateName} onChangeText={setStateName} placeholder="State" />
             </View>
           </View>
         </View>
@@ -1051,73 +1108,76 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
             title="Submit KYC"
             onPress={handleStep5Submit}
             fullWidth
-            disabled={
-              !selectedDocType ||
-              !addressDocImage ||
-              !addressLine1.trim() ||
-              !city.trim() ||
-              !stateName.trim() ||
-              pincode.length !== 6
-            }
+            disabled={!selectedDocType || !addressDocImage || !addressLine1.trim() || !city.trim() || !stateName.trim() || pincode.length !== 6}
           />
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 
   // ===================== VIEW: COMPLETE =====================
   const renderComplete = () => (
     <View style={styles.completeContainer}>
+      {/* Success animation */}
       <MotiView
-        from={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: 'spring' as const, damping: 10 }}
+        from={{ scale: 0, rotate: '-180deg' }}
+        animate={{ scale: 1, rotate: '0deg' }}
+        transition={{ type: 'spring', damping: 12 }}
       >
-        <View style={[styles.checkCircleOuter, { backgroundColor: colors.successMuted }]}>
-          <View style={[styles.checkCircle, { backgroundColor: colors.success }]}>
-            <MaterialCommunityIcons name="check" size={36} color="#FFFFFF" />
+        <LinearGradient
+          colors={['#16A34A', '#22C55E']}
+          style={styles.completeCircleOuter}
+        >
+          <View style={styles.completeCircleInner}>
+            <MaterialCommunityIcons name="check-bold" size={40} color="#FFFFFF" />
           </View>
-        </View>
+        </LinearGradient>
       </MotiView>
 
       <MotiView
         from={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 500, delay: 300 }}
+        transition={{ type: 'timing', duration: 500, delay: 400 }}
       >
-        <Text style={[styles.completeTitle, { color: colors.text }]}>
-          KYC Submitted Successfully!
-        </Text>
+        <Text style={[styles.completeTitle, { color: colors.text }]}>KYC Submitted!</Text>
         <Text style={[styles.completeSubtitle, { color: colors.textSecondary }]}>
-          Your documents are under review. This usually takes 24-48 hours. We'll notify you once verified.
+          Your documents are under review. We'll notify you once verified within 24-48 hours.
         </Text>
       </MotiView>
 
+      {/* Timeline card */}
       <MotiView
-        from={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        from={{ opacity: 0, translateY: 15 }}
+        animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: 'timing', duration: 400, delay: 600 }}
-        style={styles.completeInfoCard}
+        style={{ width: '100%', marginTop: 28 }}
       >
-        <View style={[styles.completeInfo, { backgroundColor: colors.infoMuted }]}>
-          <MaterialCommunityIcons name="information-outline" size={18} color={colors.info} />
-          <Text style={[styles.completeInfoText, { color: colors.info }]}>
-            You can check your verification status anytime from the Profile screen.
-          </Text>
+        <View style={[styles.completeTimelineCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {[
+            { icon: 'file-check-outline' as const, label: 'Documents submitted', color: '#22C55E', done: true },
+            { icon: 'magnify-scan' as const, label: 'Under review', color: '#F59E0B', done: false },
+            { icon: 'shield-check' as const, label: 'Verification complete', color: '#3B82F6', done: false },
+          ].map((item, idx) => (
+            <View key={item.label} style={styles.completeTimelineRow}>
+              <View style={[styles.completeTimelineDot, { backgroundColor: item.done ? item.color : `${item.color}30` }]}>
+                <MaterialCommunityIcons name={item.icon} size={16} color={item.done ? '#FFFFFF' : item.color} />
+              </View>
+              {idx < 2 && <View style={[styles.completeTimelineLine, { backgroundColor: item.done ? item.color : colors.border }]} />}
+              <Text style={[styles.completeTimelineText, { color: item.done ? colors.text : colors.textMuted }]}>
+                {item.label}
+              </Text>
+            </View>
+          ))}
         </View>
       </MotiView>
 
       <MotiView
         from={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ type: 'timing', duration: 400, delay: 600 }}
+        transition={{ type: 'timing', duration: 400, delay: 800 }}
         style={styles.completeButton}
       >
-        <AppButton
-          title="Back to Profile"
-          onPress={() => navigation.navigate('Profile')}
-          fullWidth
-        />
+        <AppButton title="Back to Profile" onPress={() => navigation.navigate('Profile')} fullWidth />
       </MotiView>
     </View>
   );
@@ -1179,109 +1239,208 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
 // ===================== STYLES =====================
 const styles = StyleSheet.create({
   viewContainer: {
-    paddingHorizontal: 20,
     paddingTop: 16,
   },
 
-  // Status Banner
-  statusBanner: {
-    padding: 18,
-    marginBottom: 20,
+  // ---- Hero Status Card ----
+  heroCard: {
     borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
   },
-  statusRow: {
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  statusIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  heroIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statusTextContainer: {
+  heroTextWrap: {
     flex: 1,
     marginLeft: 14,
   },
-  statusLabel: {
-    fontSize: 17,
+  heroLabel: {
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
-  statusDescription: {
+  heroDescription: {
     fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
     marginTop: 4,
-    lineHeight: 19,
-    opacity: 0.85,
+    lineHeight: 18,
   },
-
-  // Timeline
-  timelineCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 20,
-    paddingBottom: 8,
+  heroProgressSection: {
+    marginTop: 18,
+  },
+  heroProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  timelineTitle: {
-    fontSize: 11,
+  heroProgressLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    letterSpacing: 1.5,
-    marginBottom: 16,
+    color: 'rgba(255,255,255,0.75)',
+    letterSpacing: 0.2,
   },
-  timelineStep: {
+  heroProgressPercent: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroProgressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    overflow: 'hidden',
+  },
+  heroProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+  },
+
+  // ---- Compliance Note ----
+  complianceNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 64,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 12,
-    paddingRight: 4,
+    marginBottom: 20,
+    gap: 8,
   },
-  timelineLeft: {
+  complianceText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 17,
+  },
+
+  // ---- Step Cards ----
+  stepsSection: {
+    gap: 10,
+  },
+  stepCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    width: 32,
-  },
-  timelineCircle: {
-    width: 32,
-    height: 32,
     borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+  },
+  stepIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    marginVertical: 4,
+  stepIconCompleted: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  timelineRight: {
+  stepTextWrap: {
     flex: 1,
-    marginLeft: 16,
-    paddingVertical: 12,
+    marginLeft: 14,
   },
-  timelineStepName: {
+  stepName: {
     fontSize: 15,
     fontWeight: '600',
+    letterSpacing: -0.1,
   },
-  timelineStatus: {
+  stepSubtitle: {
     fontSize: 12,
     marginTop: 2,
-    fontWeight: '500',
+    fontWeight: '400',
+  },
+  stepBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 4,
+  },
+  stepBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 
-  // Step Content
+  // ---- Pulsing Dot ----
+  pulsingDotContainer: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pulsingRing: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  pulsingDotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  // ---- Trust Row ----
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    gap: 6,
+  },
+  trustText: {
+    fontSize: 11,
+    fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+
+  // ---- Step Content (individual steps) ----
   stepContent: {
     marginTop: 16,
   },
-  stepTitle: {
+  stepHeroCard: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  stepHeroIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  stepHeroTitle: {
     fontSize: 22,
     fontWeight: '700',
-    marginBottom: 4,
-    letterSpacing: 0.2,
+    letterSpacing: -0.4,
+    textAlign: 'center',
   },
-  stepSubtitle: {
-    fontSize: 14,
-    marginBottom: 20,
-    lineHeight: 20,
+  stepHeroSubtitle: {
+    fontSize: 13,
+    marginTop: 6,
+    lineHeight: 19,
+    textAlign: 'center',
+    maxWidth: 280,
   },
   sectionLabel: {
     fontSize: 11,
@@ -1297,8 +1456,23 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     marginBottom: 20,
   },
+  uploadSectionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+  },
+  uploadSectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+  uploadSectionHint: {
+    fontSize: 12,
+    marginTop: 2,
+  },
 
-  // Upload Row
+  // ---- Upload Row ----
   uploadRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1327,7 +1501,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Image Preview
+  // ---- Image Preview ----
   imagePreviewContainer: {
     borderRadius: 16,
     borderWidth: 2,
@@ -1358,7 +1532,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Selfie
+  // ---- Selfie ----
   selfieCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -1366,26 +1540,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  selfieScanArea: {
+    width: 140,
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  selfieScanCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cornerBracket: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderWidth: 3,
+    borderColor: 'transparent',
+  } as any,
+  cornerTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderTopLeftRadius: 8,
+  },
+  cornerTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderTopRightRadius: 8,
+  },
+  cornerBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderBottomLeftRadius: 8,
+  },
+  cornerBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderBottomRightRadius: 8,
+  },
   selfieIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
   tipsContainer: {
     width: '100%',
-    gap: 12,
+    gap: 14,
   },
   tipRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   tipIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1402,17 +1627,30 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 100,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 3,
   },
   selfiePreview: {
     width: '100%',
     height: '100%',
   },
+  selfieMatchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    marginBottom: 16,
+  },
+  selfieMatchText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
 
-  // Document Upload (Step 4)
+  // ---- Document Upload (Step 4) ----
   documentUploadCard: {
-    height: 160,
+    height: 170,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     borderRadius: 20,
@@ -1422,12 +1660,12 @@ const styles = StyleSheet.create({
   },
   documentUploadContent: {
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   docIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -1440,8 +1678,21 @@ const styles = StyleSheet.create({
   documentUploadHint: {
     fontSize: 12,
   },
+  uploadSuccessBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    marginTop: 2,
+  },
+  uploadSuccessText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
 
-  // Chip Row (Step 5)
+  // ---- Chip Row (Step 5) ----
   chipRow: {
     marginBottom: 8,
   },
@@ -1449,7 +1700,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
 
-  // Address Form
+  // ---- Address Form ----
   addressFormCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -1469,61 +1720,76 @@ const styles = StyleSheet.create({
     width: 12,
   },
 
-  // Bottom Action
+  // ---- Bottom Action ----
   bottomAction: {
     marginTop: 24,
     marginBottom: 32,
   },
 
-  // Complete View
+  // ---- Complete View ----
   completeContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 16,
   },
-  checkCircleOuter: {
+  completeCircleOuter: {
     width: 100,
     height: 100,
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 3,
   },
-  checkCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  completeCircleInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   completeTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     textAlign: 'center',
-    marginTop: 28,
-    letterSpacing: 0.2,
+    marginTop: 24,
+    letterSpacing: -0.5,
   },
   completeSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
-    marginTop: 10,
-    lineHeight: 22,
+    marginTop: 8,
+    lineHeight: 21,
   },
-  completeInfoCard: {
-    width: '100%',
-    marginTop: 24,
+  completeTimelineCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
   },
-  completeInfo: {
+  completeTimelineRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 14,
-    borderRadius: 14,
-    gap: 10,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  completeInfoText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 19,
+  completeTimelineDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completeTimelineLine: {
+    position: 'absolute',
+    left: 15,
+    top: 34,
+    width: 2,
+    height: 20,
+  },
+  completeTimelineText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 14,
   },
   completeButton: {
     marginTop: 28,

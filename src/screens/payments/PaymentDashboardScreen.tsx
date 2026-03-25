@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import { MotiView } from '../../utils/MotiCompat';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Toast from 'react-native-toast-message';
 
 import { useTheme } from '../../hooks/useTheme';
 import { PaymentStackParamList } from '../../types/navigation';
@@ -28,6 +27,10 @@ import AppBadge from '../../components/ui/AppBadge';
 import AppButton from '../../components/ui/AppButton';
 import AppSwitch from '../../components/ui/AppSwitch';
 import AnimatedCounter from '../../components/shared/AnimatedCounter';
+import BulkPaymentSheet, { BulkPaymentSheetRef } from '../../components/shared/BulkPaymentSheet';
+import SinglePaymentSheet, { SinglePaymentSheetRef } from '../../components/shared/SinglePaymentSheet';
+import OverduePaymentSheet, { OverduePaymentSheetRef } from '../../components/shared/OverduePaymentSheet';
+import AddPaymentMethodSheet, { AddPaymentMethodSheetRef } from '../../components/shared/AddPaymentMethodSheet';
 
 import type { UpcomingPayment, PaymentMethodInfo } from '../../types/payment';
 import { BorderRadius, Spacing } from '../../constants/spacing';
@@ -60,6 +63,11 @@ const PaymentDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const [refreshing, setRefreshing] = useState(false);
   const [autoDebitEnabled, setAutoDebitEnabled] = useState(true);
+
+  const bulkPaymentRef = useRef<BulkPaymentSheetRef>(null);
+  const singlePaymentRef = useRef<SinglePaymentSheetRef>(null);
+  const overduePaymentRef = useRef<OverduePaymentSheetRef>(null);
+  const addMethodRef = useRef<AddPaymentMethodSheetRef>(null);
 
   useEffect(() => {
     loadPayments();
@@ -111,38 +119,22 @@ const PaymentDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const handlePayAll = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Toast.show({
-      type: 'info',
-      text1: 'Pay All EMIs',
-      text2: 'Bulk payment flow coming soon',
-    });
+    bulkPaymentRef.current?.open();
   }, []);
 
-  const handlePaySingle = useCallback(async () => {
+  const handlePaySingleItem = useCallback(async (item: UpcomingPayment) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Toast.show({
-      type: 'info',
-      text1: 'Payment Flow',
-      text2: 'Individual payment flow coming soon',
-    });
+    singlePaymentRef.current?.open(item);
   }, []);
 
   const handlePayOverdue = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Toast.show({
-      type: 'info',
-      text1: 'Pay Overdue',
-      text2: 'Overdue payment flow coming soon',
-    });
-  }, []);
+    overduePaymentRef.current?.open(overduePayments);
+  }, [overduePayments]);
 
   const handleAddPaymentMethod = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Toast.show({
-      type: 'info',
-      text1: 'Add Payment Method',
-      text2: 'Coming soon',
-    });
+    addMethodRef.current?.open();
   }, []);
 
   const getLoanIcon = (loanType: string): React.ComponentProps<typeof MaterialCommunityIcons>['name'] => {
@@ -173,7 +165,7 @@ const PaymentDashboardScreen: React.FC<Props> = ({ navigation }) => {
                 opacity: pressed ? 0.92 : 1,
               },
             ]}
-            onPress={handlePaySingle}
+            onPress={() => handlePaySingleItem(item)}
           >
             <View
               style={[
@@ -245,7 +237,7 @@ const PaymentDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </MotiView>
       );
     },
-    [colors, handlePaySingle],
+    [colors, handlePaySingleItem],
   );
 
   const renderPaymentMethod = useCallback(
@@ -578,6 +570,12 @@ const PaymentDashboardScreen: React.FC<Props> = ({ navigation }) => {
       </MotiView>
 
       <View style={styles.bottomSpacer} />
+
+      {/* Payment Flow Sheets */}
+      <BulkPaymentSheet ref={bulkPaymentRef} />
+      <SinglePaymentSheet ref={singlePaymentRef} />
+      <OverduePaymentSheet ref={overduePaymentRef} />
+      <AddPaymentMethodSheet ref={addMethodRef} />
     </ScreenWrapper>
   );
 };

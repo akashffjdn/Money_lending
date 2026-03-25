@@ -1,18 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from '../../utils/MotiCompat';
@@ -42,8 +36,8 @@ const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const shakeX = useSharedValue(0);
-  const boxScales = Array.from({ length: OTP_LENGTH }, () => useSharedValue(1));
+  const shakeX = useRef(new Animated.Value(0)).current;
+  const boxScales = useRef(Array.from({ length: OTP_LENGTH }, () => new Animated.Value(1))).current;
 
   const maskedPhone = phone.length > 5
     ? `+91 ${phone.slice(0, 5)} XXXXX`
@@ -67,14 +61,14 @@ const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
   }, []);
 
   const triggerShake = useCallback(() => {
-    shakeX.value = withSequence(
-      withTiming(12, { duration: 50 }),
-      withTiming(-12, { duration: 50 }),
-      withTiming(8, { duration: 50 }),
-      withTiming(-8, { duration: 50 }),
-      withTiming(4, { duration: 50 }),
-      withTiming(0, { duration: 50 }),
-    );
+    Animated.sequence([
+      Animated.timing(shakeX, { toValue: 12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue: -12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue: 4, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
   }, [shakeX]);
 
   const handleVerify = useCallback(
@@ -128,10 +122,10 @@ const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
       });
 
       if (digit) {
-        boxScales[index].value = withSequence(
-          withSpring(1.15, { damping: 6 }),
-          withSpring(1.0),
-        );
+        Animated.sequence([
+          Animated.spring(boxScales[index], { toValue: 1.15, damping: 6, useNativeDriver: true }),
+          Animated.spring(boxScales[index], { toValue: 1.0, useNativeDriver: true }),
+        ]).start();
       }
 
       if (digit && index < OTP_LENGTH - 1) {
@@ -174,9 +168,9 @@ const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [phone, sendOTP]);
 
-  const shakeAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
-  }));
+  const shakeAnimatedStyle = {
+    transform: [{ translateX: shakeX }],
+  };
 
   const getBorderColor = (index: number): string => {
     if (successState) return colors.success;
@@ -256,9 +250,9 @@ const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
 
           <Animated.View style={[styles.otpContainer, shakeAnimatedStyle]}>
             {Array.from({ length: OTP_LENGTH }).map((_, index) => {
-              const scaleStyle = useAnimatedStyle(() => ({
-                transform: [{ scale: boxScales[index].value }],
-              }));
+              const scaleStyle = {
+                transform: [{ scale: boxScales[index] }],
+              };
 
               return (
                 <Animated.View key={index} style={[styles.otpBoxWrapper, scaleStyle]}>

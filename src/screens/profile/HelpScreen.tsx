@@ -1,9 +1,11 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import {
+  Animated,
   View,
   Text,
   StyleSheet,
   Pressable,
+  TextInput,
   ScrollView,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,14 +13,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MotiView } from '../../utils/MotiCompat';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { useTheme } from '../../hooks/useTheme';
-import AppInput from '../../components/ui/AppInput';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import { ProfileStackParamList } from '../../types/navigation';
 
@@ -80,15 +76,15 @@ interface AccordionItemProps {
 const AccordionItem = memo<AccordionItemProps>(
   ({ item, isExpanded, onToggle, index }) => {
     const { colors } = useTheme();
-    const rotation = useSharedValue(isExpanded ? 180 : 0);
+    const rotation = useRef(new Animated.Value(isExpanded ? 180 : 0)).current;
 
-    React.useEffect(() => {
-      rotation.value = withTiming(isExpanded ? 180 : 0, { duration: 250 });
+    useEffect(() => {
+      Animated.timing(rotation, { toValue: isExpanded ? 180 : 0, duration: 250, useNativeDriver: true }).start();
     }, [isExpanded, rotation]);
 
-    const chevronStyle = useAnimatedStyle(() => ({
-      transform: [{ rotate: `${rotation.value}deg` }],
-    }));
+    const chevronStyle = {
+      transform: [{ rotate: rotation.interpolate({ inputRange: [0, 180], outputRange: ['0deg', '180deg'] }) }],
+    };
 
     const handlePress = useCallback(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -284,34 +280,46 @@ const HelpScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   return (
-    <ScreenWrapper headerTitle="Help & FAQ" onBack={() => navigation.goBack()}>
+    <ScreenWrapper headerTitle="Help & FAQ" onBack={() => navigation.goBack()} scrollable={false}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
       >
         {/* ---- Search ---- */}
-        <MotiView
-          from={{ opacity: 0, translateY: -8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 350 }}
-          style={styles.searchWrapper}
+        <View
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: colors.inputBg,
+              borderColor: colors.inputBorder,
+            },
+          ]}
         >
-          <AppInput
-            label=""
+          <MaterialCommunityIcons
+            name="magnify"
+            size={20}
+            color={colors.textMuted}
+          />
+          <TextInput
             placeholder="Search for help..."
+            placeholderTextColor={colors.textMuted}
             value={searchText}
             onChangeText={setSearchText}
             autoCapitalize="none"
-            leftIcon={
+            style={[styles.searchInput, { color: colors.text }]}
+          />
+          {searchText.length > 0 && (
+            <Pressable onPress={() => setSearchText('')} hitSlop={8}>
               <MaterialCommunityIcons
-                name="magnify"
-                size={20}
+                name="close-circle"
+                size={18}
                 color={colors.textMuted}
               />
-            }
-          />
-        </MotiView>
+            </Pressable>
+          )}
+        </View>
 
         {/* ---- FAQ Accordion ---- */}
         <View style={styles.faqSection}>
@@ -414,14 +422,27 @@ export default HelpScreen;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingBottom: 100,
   },
 
   /* Search */
-  searchWrapper: {
-    marginHorizontal: 20,
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 14,
+    height: 48,
+    paddingHorizontal: 14,
     marginTop: 8,
+    gap: 10,
   },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 0,
+    outlineStyle: 'none',
+  } as any,
 
   /* FAQ */
   faqSection: {
@@ -431,11 +452,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.5,
-    marginHorizontal: 20,
     marginBottom: 12,
   },
   accordionWrapper: {
-    marginHorizontal: 20,
     marginBottom: 10,
   },
   accordionCard: {
@@ -490,7 +509,6 @@ const styles = StyleSheet.create({
   /* Contact */
   contactSection: {
     marginTop: 28,
-    paddingHorizontal: 20,
     marginBottom: 8,
   },
   contactSectionTitle: {

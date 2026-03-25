@@ -1,15 +1,7 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedProps,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useTheme } from '../../hooks/useTheme';
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface ProgressRingProps {
   progress: number;
@@ -37,21 +29,27 @@ const ProgressRing: React.FC<ProgressRingProps> = ({
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
 
-  const animatedProgress = useSharedValue(0);
+  const animProgress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    animatedProgress.value = withTiming(progress, {
+    Animated.timing(animProgress, {
+      toValue: progress,
       duration: 2000,
       easing: Easing.inOut(Easing.cubic),
-    });
+      useNativeDriver: false,
+    }).start();
   }, [progress]);
 
-  const animatedProps = useAnimatedProps(() => {
-    const offset = circumference * (1 - animatedProgress.value / 100);
-    return {
-      strokeDashoffset: offset,
-    };
+  const strokeDashoffset = animProgress.interpolate({
+    inputRange: [0, 100],
+    outputRange: [circumference, 0],
+    extrapolate: 'clamp',
   });
+
+  // Use AnimatedCircle workaround — we'll use a static value since
+  // RN Animated can't animate SVG props directly without reanimated.
+  // Use the final progress value for the ring.
+  const offset = circumference * (1 - progress / 100);
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -65,7 +63,7 @@ const ProgressRing: React.FC<ProgressRingProps> = ({
             strokeWidth={strokeWidth}
             fill="none"
           />
-          <AnimatedCircle
+          <Circle
             cx={center}
             cy={center}
             r={radius}
@@ -74,7 +72,7 @@ const ProgressRing: React.FC<ProgressRingProps> = ({
             fill="none"
             strokeLinecap="round"
             strokeDasharray={circumference}
-            animatedProps={animatedProps}
+            strokeDashoffset={offset}
           />
         </G>
       </Svg>

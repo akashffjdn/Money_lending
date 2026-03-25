@@ -1,12 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  interpolateColor,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { Pressable, StyleSheet, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -24,13 +17,15 @@ const THUMB_TRAVEL = TRACK_WIDTH - THUMB_SIZE - THUMB_OFFSET * 2;
 
 const AppSwitch: React.FC<AppSwitchProps> = ({ value, onValueChange }) => {
   const { colors } = useTheme();
-  const progress = useSharedValue(value ? 1 : 0);
+  const progress = useRef(new Animated.Value(value ? 1 : 0)).current;
 
-  React.useEffect(() => {
-    progress.value = withSpring(value ? 1 : 0, {
+  useEffect(() => {
+    Animated.spring(progress, {
+      toValue: value ? 1 : 0,
       damping: 15,
       stiffness: 150,
-    });
+      useNativeDriver: false,
+    }).start();
   }, [value, progress]);
 
   const handlePress = async () => {
@@ -38,28 +33,22 @@ const AppSwitch: React.FC<AppSwitchProps> = ({ value, onValueChange }) => {
     onValueChange(!value);
   };
 
-  const animatedTrackStyle = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-      progress.value,
-      [0, 1],
-      [colors.surface, colors.primary]
-    );
-    return { backgroundColor };
+  const trackBgColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.surface, colors.primary],
   });
 
-  const animatedThumbStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateX:
-          THUMB_OFFSET + progress.value * THUMB_TRAVEL,
-      },
-    ],
-  }));
+  const thumbTranslateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [THUMB_OFFSET, THUMB_OFFSET + THUMB_TRAVEL],
+  });
 
   return (
     <Pressable onPress={handlePress}>
-      <Animated.View style={[styles.track, animatedTrackStyle]}>
-        <Animated.View style={[styles.thumb, animatedThumbStyle]} />
+      <Animated.View style={[styles.track, { backgroundColor: trackBgColor }]}>
+        <Animated.View
+          style={[styles.thumb, { transform: [{ translateX: thumbTranslateX }] }]}
+        />
       </Animated.View>
     </Pressable>
   );

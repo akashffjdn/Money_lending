@@ -356,7 +356,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 14,
     height: 56,
-    paddingHorizontal: 4,
+    paddingLeft: 4,
+    paddingRight: 14,
   },
   countryCode: {
     flexDirection: 'row',
@@ -375,7 +376,10 @@ const styles = StyleSheet.create({
   },
   phoneInput: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     paddingLeft: 14,
+    paddingRight: 8,
     fontSize: 20,
     letterSpacing: 1.5,
     fontWeight: '600',
@@ -383,7 +387,8 @@ const styles = StyleSheet.create({
     outlineStyle: 'none',
   } as any,
   clearButton: {
-    padding: 8,
+    flexShrink: 0,
+    marginLeft: 4,
   },
   validIcon: {
     width: 22,

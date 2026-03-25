@@ -1,19 +1,27 @@
-import { useEffect } from 'react';
-import { useSharedValue, withTiming, withDelay, Easing } from 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing } from 'react-native';
 
 export const useAnimatedEntry = (delay: number = 0, duration: number = 400) => {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    opacity.value = withDelay(
-      delay,
-      withTiming(1, { duration, easing: Easing.out(Easing.cubic) }),
-    );
-    translateY.value = withDelay(
-      delay,
-      withTiming(0, { duration, easing: Easing.out(Easing.cubic) }),
-    );
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   return { opacity, translateY };

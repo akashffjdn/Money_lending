@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   headerRight: {
-    width: 40,
+    minWidth: 40,
     alignItems: 'flex-end',
   },
   headerPlaceholder: {

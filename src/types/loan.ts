@@ -35,6 +35,16 @@ export interface RepaymentEntry {
   status: 'paid' | 'upcoming' | 'overdue' | 'current';
 }
 
+export type ApplicationStatus = 'submitted' | 'verification' | 'credit_check' | 'approved' | 'disbursed' | 'rejected';
+
+export interface SubmittedApplication {
+  id: string;
+  referenceId: string;
+  application: LoanApplication;
+  status: ApplicationStatus;
+  submittedAt: string; // ISO date
+}
+
 export interface LoanApplication {
   loanType: LoanType | null;
   amount: number;

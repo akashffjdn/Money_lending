@@ -1,14 +1,11 @@
 import React, { useRef, useCallback } from 'react';
 import {
   View,
+  Text,
   PanResponder,
   StyleSheet,
   type LayoutChangeEvent,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { Shadows } from '../../constants/spacing';
@@ -89,12 +86,9 @@ const AppSlider: React.FC<AppSliderProps> = ({
         onLayout={handleLayout}
         {...panResponder.panHandlers}
       >
-        {/* Background track */}
         <View
           style={[styles.track, { backgroundColor: colors.border }]}
         />
-
-        {/* Filled track */}
         <LinearGradient
           colors={[colors.primaryDark, colors.primary]}
           start={{ x: 0, y: 0 }}
@@ -104,8 +98,6 @@ const AppSlider: React.FC<AppSliderProps> = ({
             { width: `${percentage}%` },
           ]}
         />
-
-        {/* Thumb */}
         <View
           style={[
             styles.thumb,
@@ -117,11 +109,9 @@ const AppSlider: React.FC<AppSliderProps> = ({
           ]}
         />
       </View>
-
-      {/* Label */}
-      <Animated.Text style={[styles.label, { color: colors.textSecondary }]}>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
         {displayLabel}
-      </Animated.Text>
+      </Text>
     </View>
   );
 };

@@ -8,7 +8,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { MotiView } from '../../utils/MotiCompat';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -251,8 +250,7 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         </MotiView>
 
         {/* Loan Details Card */}
-        <Animated.View
-          entering={FadeInDown.delay(100).duration(400)}
+        <View
           style={styles.sectionWrapper}
         >
           <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -301,11 +299,10 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               />
             </View>
           </View>
-        </Animated.View>
+        </View>
 
         {/* EMI Details Card */}
-        <Animated.View
-          entering={FadeInDown.delay(200).duration(400)}
+        <View
           style={styles.sectionWrapper}
         >
           <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -363,12 +360,11 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               />
             </View>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Bank Details Card */}
         {loan.bankName ? (
-          <Animated.View
-            entering={FadeInDown.delay(300).duration(400)}
+          <View
             style={styles.sectionWrapper}
           >
             <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -398,12 +394,12 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
               </View>
             </View>
-          </Animated.View>
+          </View>
         ) : null}
 
         {/* Repayment Schedule */}
         {loan.repaymentSchedule.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(400).duration(400)}>
+          <View style={styles.sectionWrapper}>
             <Section title="Repayment Schedule">
               <View style={[styles.scheduleCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 {/* Header Row */}
@@ -522,7 +518,7 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 )}
               </View>
             </Section>
-          </Animated.View>
+          </View>
         )}
       </ScrollView>
 
@@ -590,6 +586,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 8,
+    paddingBottom: 120,
   },
 
   // Hero

@@ -1,14 +1,7 @@
 import React from 'react';
-import { Pressable, View, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import { Pressable, View, Text, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface AppChipProps {
   label: string;
@@ -17,8 +10,6 @@ interface AppChipProps {
   leftIcon?: React.ReactNode;
 }
 
-const SPRING_CONFIG = { damping: 15, stiffness: 200 };
-
 const AppChip: React.FC<AppChipProps> = ({
   label,
   selected = false,
@@ -26,19 +17,6 @@ const AppChip: React.FC<AppChipProps> = ({
   leftIcon,
 }) => {
   const { colors } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.95, SPRING_CONFIG);
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, SPRING_CONFIG);
-  };
 
   const handlePress = async () => {
     if (!onPress) return;
@@ -47,31 +25,42 @@ const AppChip: React.FC<AppChipProps> = ({
   };
 
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={animatedStyle}
+      style={({ pressed }) => pressed && { transform: [{ scale: 0.95 }] }}
     >
       <View
         style={[
           styles.chip,
           selected
-            ? { backgroundColor: colors.primary, borderColor: colors.primary, borderWidth: 1 }
-            : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+            ? {
+                backgroundColor: colors.primary,
+                borderColor: colors.primary,
+                borderWidth: 1.5,
+                shadowColor: '#C8850A',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 6,
+                elevation: 3,
+              }
+            : {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderWidth: 1,
+              },
         ]}
       >
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
-        <Animated.Text
+        <Text
           style={[
             styles.label,
             { color: selected ? '#FFFFFF' : colors.textSecondary },
           ]}
         >
           {label}
-        </Animated.Text>
+        </Text>
       </View>
-    </AnimatedPressable>
+    </Pressable>
   );
 };
 
@@ -80,12 +69,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9999,
-    height: 36,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    height: 40,
+    paddingHorizontal: 18,
+    gap: 6,
   },
   leftIcon: {
-    marginRight: 6,
+    marginRight: 2,
   },
   label: {
     fontSize: 14,

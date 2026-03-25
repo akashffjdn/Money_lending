@@ -4,21 +4,14 @@ import {
   ActivityIndicator,
   StyleSheet,
   View,
+  Text,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { Shadows } from '../../constants/spacing';
-import { Typography } from '../../constants/typography';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -41,8 +34,6 @@ const SIZE_CONFIG: Record<ButtonSize, { height: number; fontSize: number; paddin
   lg: { height: 52, fontSize: 16, paddingH: 28 },
 };
 
-const SPRING_CONFIG = { damping: 15, stiffness: 200 };
-
 const AppButton: React.FC<AppButtonProps> = ({
   title,
   onPress,
@@ -55,21 +46,6 @@ const AppButton: React.FC<AppButtonProps> = ({
   size = 'md',
 }) => {
   const { colors } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    if (!disabled && !loading) {
-      scale.value = withSpring(0.97, SPRING_CONFIG);
-    }
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, SPRING_CONFIG);
-  };
 
   const handlePress = async () => {
     if (disabled || loading) return;
@@ -153,7 +129,7 @@ const AppButton: React.FC<AppButtonProps> = ({
       ) : (
         <>
           {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
-          <Animated.Text style={textStyle}>{title}</Animated.Text>
+          <Text style={textStyle}>{title}</Text>
           {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
         </>
       )}
@@ -163,22 +139,15 @@ const AppButton: React.FC<AppButtonProps> = ({
   const wrapperStyle = fullWidth ? styles.fullWidth : undefined;
   const disabledStyle = disabled ? styles.disabled : undefined;
 
-  // Ghost variant gets a pressed background tint
-  const getGhostPressedStyle = (pressed: boolean): ViewStyle | undefined => {
-    if (variant === 'ghost' && pressed && !disabled && !loading) {
-      return { backgroundColor: colors.primaryMuted };
-    }
-    return undefined;
-  };
-
   if (variant === 'primary') {
     return (
-      <AnimatedPressable
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+      <Pressable
         onPress={handlePress}
         disabled={disabled || loading}
-        style={[animatedStyle, wrapperStyle]}
+        style={({ pressed }) => [
+          wrapperStyle,
+          pressed && !disabled && !loading && { transform: [{ scale: 0.97 }] },
+        ]}
       >
         <LinearGradient
           colors={[colors.primaryDark, colors.primary]}
@@ -192,30 +161,33 @@ const AppButton: React.FC<AppButtonProps> = ({
         >
           {renderInner()}
         </LinearGradient>
-      </AnimatedPressable>
+      </Pressable>
     );
   }
 
   return (
-    <AnimatedPressable
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+    <Pressable
       onPress={handlePress}
       disabled={disabled || loading}
-      style={[animatedStyle, wrapperStyle]}
+      style={({ pressed }) => [
+        wrapperStyle,
+        pressed && !disabled && !loading && { transform: [{ scale: 0.97 }] },
+      ]}
     >
       {({ pressed }: { pressed: boolean }) => (
         <View
           style={[
             containerStyle,
             disabledStyle,
-            getGhostPressedStyle(pressed),
+            variant === 'ghost' && pressed && !disabled && !loading
+              ? { backgroundColor: colors.primaryMuted }
+              : undefined,
           ]}
         >
           {renderInner()}
         </View>
       )}
-    </AnimatedPressable>
+    </Pressable>
   );
 };
 

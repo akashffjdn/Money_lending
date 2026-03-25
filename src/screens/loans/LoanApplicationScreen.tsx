@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+
 import { MotiView } from '../../utils/MotiCompat';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -203,6 +203,8 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={async () => {
                   await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   updateApplication({ loanType: type.key });
+                  // Auto-advance to next step after selection
+                  setTimeout(() => setStep(1), 300);
                 }}
                 style={[
                   styles.typeCard,
@@ -419,188 +421,315 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
 
   // --- Step 2: Employment & Personal Details ---
 
-  const renderStep2 = () => (
-    <MotiView
-      from={{ opacity: 0, translateY: 20 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 400 }}
-    >
-      {/* Employment Type */}
-      <Text style={[styles.sectionLabel, { color: colors.text }]}>
-        Employment Type
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipRow}
-      >
-        {EMPLOYMENT_TYPES.map((et) => (
-          <View key={et.key} style={styles.quickChipWrapper}>
-            <AppChip
-              label={et.label}
-              selected={application.employmentType === et.key}
-              onPress={() => updateApplication({ employmentType: et.key })}
-            />
-          </View>
-        ))}
-      </ScrollView>
+  const renderStep2 = () => {
+    // Employment type card config
+    const empTypeCards: {
+      key: 'salaried' | 'self_employed' | 'business_owner';
+      label: string;
+      icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+      color: string;
+      bg: string;
+    }[] = [
+      { key: 'salaried', label: 'Salaried', icon: 'badge-account-horizontal', color: '#C8850A', bg: 'rgba(200,133,10,0.10)' },
+      { key: 'self_employed', label: 'Self-Employed', icon: 'account-tie', color: '#3B82F6', bg: 'rgba(59,130,246,0.10)' },
+      { key: 'business_owner', label: 'Business Owner', icon: 'domain', color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)' },
+    ];
 
-      {/* Conditional Fields */}
-      {application.employmentType === 'salaried' && (
+    // Residential type card config
+    const resCards: {
+      key: 'owned' | 'rented' | 'family';
+      label: string;
+      icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+    }[] = [
+      { key: 'owned', label: 'Owned', icon: 'home' },
+      { key: 'rented', label: 'Rented', icon: 'home-city-outline' },
+      { key: 'family', label: 'Family', icon: 'home-heart' },
+    ];
+
+    return (
+      <View>
+        {/* Section 1: Employment Type */}
         <MotiView
-          from={{ opacity: 0, translateY: 10 }}
+          from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 100 }}
+          transition={{ type: 'timing', duration: 350 }}
         >
-          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <AppInput
-              label="Company Name"
-              value={application.companyName}
-              onChangeText={(text) => updateApplication({ companyName: text })}
-              placeholder="Enter company name"
-            />
-            <AppInput
-              label="Designation"
-              value={application.designation}
-              onChangeText={(text) => updateApplication({ designation: text })}
-              placeholder="Enter designation"
-            />
-            <AppInput
-              label="Monthly Salary"
-              value={application.monthlyIncome > 0 ? String(application.monthlyIncome) : ''}
-              onChangeText={(text) => updateApplication({ monthlyIncome: Number(text) || 0 })}
-              placeholder="Enter monthly salary"
-              keyboardType="numeric"
-            />
-            <AppInput
-              label="Experience (years)"
-              value={application.experience > 0 ? String(application.experience) : ''}
-              onChangeText={(text) => updateApplication({ experience: Number(text) || 0 })}
-              placeholder="Years of experience"
-              keyboardType="numeric"
-            />
+          {/* Section header with icon */}
+          <View style={styles.dtSectionHeader}>
+            <View style={[styles.dtSectionIconBg, { backgroundColor: 'rgba(200,133,10,0.10)' }]}>
+              <MaterialCommunityIcons name="briefcase-outline" size={16} color="#C8850A" />
+            </View>
+            <View>
+              <Text style={[styles.dtSectionTitle, { color: colors.text }]}>Employment Type</Text>
+              <Text style={[styles.dtSectionSub, { color: colors.textMuted }]}>Select your work category</Text>
+            </View>
+          </View>
+
+          {/* Employment type cards */}
+          <View style={styles.dtEmpGrid}>
+            {empTypeCards.map((et) => {
+              const selected = application.employmentType === et.key;
+              return (
+                <Pressable
+                  key={et.key}
+                  onPress={() => updateApplication({ employmentType: et.key })}
+                  style={({ pressed }) => [
+                    styles.dtEmpCard,
+                    {
+                      backgroundColor: selected ? et.bg : colors.card,
+                      borderColor: selected ? et.color : colors.border,
+                      borderWidth: selected ? 1.5 : 1,
+                      opacity: pressed ? 0.9 : 1,
+                    },
+                  ]}
+                >
+                  <View style={[styles.dtEmpIconCircle, { backgroundColor: selected ? et.color + '18' : colors.surface }]}>
+                    <MaterialCommunityIcons name={et.icon} size={20} color={selected ? et.color : colors.textMuted} />
+                  </View>
+                  <Text style={[styles.dtEmpLabel, { color: selected ? et.color : colors.text }]}>
+                    {et.label}
+                  </Text>
+                  {selected && (
+                    <View style={[styles.dtEmpCheck, { backgroundColor: et.color }]}>
+                      <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         </MotiView>
-      )}
 
-      {application.employmentType === 'self_employed' && (
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 100 }}
-        >
-          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <AppInput
-              label="Business Name"
-              value={application.businessName}
-              onChangeText={(text) => updateApplication({ businessName: text })}
-              placeholder="Enter business name"
-            />
-            <AppInput
-              label="Business Type"
-              value={application.businessType}
-              onChangeText={(text) => updateApplication({ businessType: text })}
-              placeholder="Enter business type"
-            />
-            <AppInput
-              label="Monthly Income"
-              value={application.monthlyIncome > 0 ? String(application.monthlyIncome) : ''}
-              onChangeText={(text) => updateApplication({ monthlyIncome: Number(text) || 0 })}
-              placeholder="Enter monthly income"
-              keyboardType="numeric"
-            />
-            <AppInput
-              label="Years in Business"
-              value={application.yearsInBusiness > 0 ? String(application.yearsInBusiness) : ''}
-              onChangeText={(text) => updateApplication({ yearsInBusiness: Number(text) || 0 })}
-              placeholder="Years in business"
-              keyboardType="numeric"
-            />
-          </View>
-        </MotiView>
-      )}
-
-      {application.employmentType === 'business_owner' && (
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 100 }}
-        >
-          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <AppInput
-              label="Company Name"
-              value={application.companyName}
-              onChangeText={(text) => updateApplication({ companyName: text })}
-              placeholder="Enter company name"
-            />
-            <AppInput
-              label="Industry"
-              value={application.businessType}
-              onChangeText={(text) => updateApplication({ businessType: text })}
-              placeholder="Enter industry"
-            />
-            <AppInput
-              label="Annual Turnover"
-              value={application.annualTurnover > 0 ? String(application.annualTurnover) : ''}
-              onChangeText={(text) => updateApplication({ annualTurnover: Number(text) || 0 })}
-              placeholder="Enter annual turnover"
-              keyboardType="numeric"
-            />
-            <AppInput
-              label="Years in Operation"
-              value={application.yearsInBusiness > 0 ? String(application.yearsInBusiness) : ''}
-              onChangeText={(text) => updateApplication({ yearsInBusiness: Number(text) || 0 })}
-              placeholder="Years in operation"
-              keyboardType="numeric"
-            />
-          </View>
-        </MotiView>
-      )}
-
-      {/* Residential Status */}
-      <View style={styles.residentialSection}>
-        <Text style={[styles.sectionLabel, { color: colors.text }]}>
-          Residential Status
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          {RESIDENTIAL_OPTIONS.map((ro) => (
-            <View key={ro.key} style={styles.quickChipWrapper}>
-              <AppChip
-                label={ro.label}
-                selected={application.residentialStatus === ro.key}
-                onPress={() => updateApplication({ residentialStatus: ro.key })}
+        {/* Section 2: Employment Details Form */}
+        {application.employmentType === 'salaried' && (
+          <MotiView
+            from={{ opacity: 0, translateY: 14 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 300, delay: 80 }}
+          >
+            <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.dtFormHeader}>
+                <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(200,133,10,0.10)' }]}>
+                  <MaterialCommunityIcons name="file-document-edit-outline" size={14} color="#C8850A" />
+                </View>
+                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Employment Details</Text>
+              </View>
+              <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
+              <AppInput
+                label="Company Name"
+                value={application.companyName}
+                onChangeText={(text) => updateApplication({ companyName: text })}
+                placeholder="Enter company name"
+                leftIcon={<MaterialCommunityIcons name="office-building-outline" size={20} />}
+              />
+              <AppInput
+                label="Designation"
+                value={application.designation}
+                onChangeText={(text) => updateApplication({ designation: text })}
+                placeholder="Enter designation"
+                leftIcon={<MaterialCommunityIcons name="briefcase-outline" size={20} />}
+              />
+              <AppInput
+                label="Monthly Salary"
+                value={application.monthlyIncome > 0 ? String(application.monthlyIncome) : ''}
+                onChangeText={(text) => updateApplication({ monthlyIncome: Number(text) || 0 })}
+                placeholder="Enter monthly salary"
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="currency-inr" size={20} />}
+              />
+              <AppInput
+                label="Experience (years)"
+                value={application.experience > 0 ? String(application.experience) : ''}
+                onChangeText={(text) => updateApplication({ experience: Number(text) || 0 })}
+                placeholder="Years of experience"
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="clock-outline" size={20} />}
               />
             </View>
-          ))}
-        </ScrollView>
-      </View>
+          </MotiView>
+        )}
 
-      {/* Financial Inputs */}
-      <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.formCardTitle, { color: colors.text }]}>
-          Financial Information
-        </Text>
-        <AppInput
-          label="Monthly Expenses"
-          value={application.monthlyExpenses > 0 ? String(application.monthlyExpenses) : ''}
-          onChangeText={(text) => updateApplication({ monthlyExpenses: Number(text) || 0 })}
-          placeholder="Enter monthly expenses"
-          keyboardType="numeric"
-        />
-        <AppInput
-          label="Existing EMI Obligations"
-          value={application.existingEmi > 0 ? String(application.existingEmi) : ''}
-          onChangeText={(text) => updateApplication({ existingEmi: Number(text) || 0 })}
-          placeholder="Enter existing EMI amount"
-          keyboardType="numeric"
-        />
+        {application.employmentType === 'self_employed' && (
+          <MotiView
+            from={{ opacity: 0, translateY: 14 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 300, delay: 80 }}
+          >
+            <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.dtFormHeader}>
+                <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(59,130,246,0.10)' }]}>
+                  <MaterialCommunityIcons name="file-document-edit-outline" size={14} color="#3B82F6" />
+                </View>
+                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Business Details</Text>
+              </View>
+              <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
+              <AppInput
+                label="Business Name"
+                value={application.businessName}
+                onChangeText={(text) => updateApplication({ businessName: text })}
+                placeholder="Enter business name"
+                leftIcon={<MaterialCommunityIcons name="store-outline" size={20} />}
+              />
+              <AppInput
+                label="Business Type"
+                value={application.businessType}
+                onChangeText={(text) => updateApplication({ businessType: text })}
+                placeholder="Enter business type"
+                leftIcon={<MaterialCommunityIcons name="shape-outline" size={20} />}
+              />
+              <AppInput
+                label="Monthly Income"
+                value={application.monthlyIncome > 0 ? String(application.monthlyIncome) : ''}
+                onChangeText={(text) => updateApplication({ monthlyIncome: Number(text) || 0 })}
+                placeholder="Enter monthly income"
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="currency-inr" size={20} />}
+              />
+              <AppInput
+                label="Years in Business"
+                value={application.yearsInBusiness > 0 ? String(application.yearsInBusiness) : ''}
+                onChangeText={(text) => updateApplication({ yearsInBusiness: Number(text) || 0 })}
+                placeholder="Years in business"
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="calendar-clock-outline" size={20} />}
+              />
+            </View>
+          </MotiView>
+        )}
+
+        {application.employmentType === 'business_owner' && (
+          <MotiView
+            from={{ opacity: 0, translateY: 14 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 300, delay: 80 }}
+          >
+            <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.dtFormHeader}>
+                <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(139,92,246,0.10)' }]}>
+                  <MaterialCommunityIcons name="file-document-edit-outline" size={14} color="#8B5CF6" />
+                </View>
+                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Company Details</Text>
+              </View>
+              <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
+              <AppInput
+                label="Company Name"
+                value={application.companyName}
+                onChangeText={(text) => updateApplication({ companyName: text })}
+                placeholder="Enter company name"
+                leftIcon={<MaterialCommunityIcons name="domain" size={20} />}
+              />
+              <AppInput
+                label="Industry"
+                value={application.businessType}
+                onChangeText={(text) => updateApplication({ businessType: text })}
+                placeholder="Enter industry"
+                leftIcon={<MaterialCommunityIcons name="factory" size={20} />}
+              />
+              <AppInput
+                label="Annual Turnover"
+                value={application.annualTurnover > 0 ? String(application.annualTurnover) : ''}
+                onChangeText={(text) => updateApplication({ annualTurnover: Number(text) || 0 })}
+                placeholder="Enter annual turnover"
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="chart-line" size={20} />}
+              />
+              <AppInput
+                label="Years in Operation"
+                value={application.yearsInBusiness > 0 ? String(application.yearsInBusiness) : ''}
+                onChangeText={(text) => updateApplication({ yearsInBusiness: Number(text) || 0 })}
+                placeholder="Years in operation"
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="calendar-clock-outline" size={20} />}
+              />
+            </View>
+          </MotiView>
+        )}
+
+        {/* Section 3: Residential Status */}
+        <MotiView
+          from={{ opacity: 0, translateY: 14 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 350, delay: 160 }}
+        >
+          <View style={styles.dtSectionHeader}>
+            <View style={[styles.dtSectionIconBg, { backgroundColor: 'rgba(14,165,233,0.10)' }]}>
+              <MaterialCommunityIcons name="home-outline" size={16} color="#0EA5E9" />
+            </View>
+            <View>
+              <Text style={[styles.dtSectionTitle, { color: colors.text }]}>Residential Status</Text>
+              <Text style={[styles.dtSectionSub, { color: colors.textMuted }]}>Your current living arrangement</Text>
+            </View>
+          </View>
+
+          <View style={styles.dtResGrid}>
+            {resCards.map((rc) => {
+              const selected = application.residentialStatus === rc.key;
+              return (
+                <Pressable
+                  key={rc.key}
+                  onPress={() => updateApplication({ residentialStatus: rc.key })}
+                  style={({ pressed }) => [
+                    styles.dtResCard,
+                    {
+                      backgroundColor: selected ? 'rgba(14,165,233,0.08)' : colors.card,
+                      borderColor: selected ? '#0EA5E9' : colors.border,
+                      borderWidth: selected ? 1.5 : 1,
+                      opacity: pressed ? 0.9 : 1,
+                    },
+                  ]}
+                >
+                  <View style={[styles.dtResIconCircle, { backgroundColor: selected ? 'rgba(14,165,233,0.15)' : colors.surface }]}>
+                    <MaterialCommunityIcons name={rc.icon} size={20} color={selected ? '#0EA5E9' : colors.textMuted} />
+                  </View>
+                  <Text style={[styles.dtResLabel, { color: selected ? '#0EA5E9' : colors.text }]}>
+                    {rc.label}
+                  </Text>
+                  {selected && (
+                    <View style={[styles.dtResCheck, { backgroundColor: '#0EA5E9' }]}>
+                      <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </MotiView>
+
+        {/* Section 4: Financial Information */}
+        <MotiView
+          from={{ opacity: 0, translateY: 14 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 350, delay: 240 }}
+        >
+          <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.dtFormHeader}>
+              <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(34,197,94,0.10)' }]}>
+                <MaterialCommunityIcons name="chart-bar" size={14} color="#22C55E" />
+              </View>
+              <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Financial Information</Text>
+            </View>
+            <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
+            <AppInput
+              label="Monthly Expenses"
+              value={application.monthlyExpenses > 0 ? String(application.monthlyExpenses) : ''}
+              onChangeText={(text) => updateApplication({ monthlyExpenses: Number(text) || 0 })}
+              placeholder="Enter monthly expenses"
+              keyboardType="numeric"
+              leftIcon={<MaterialCommunityIcons name="wallet-outline" size={20} />}
+            />
+            <AppInput
+              label="Existing EMI Obligations"
+              value={application.existingEmi > 0 ? String(application.existingEmi) : ''}
+              onChangeText={(text) => updateApplication({ existingEmi: Number(text) || 0 })}
+              placeholder="Enter existing EMI amount"
+              keyboardType="numeric"
+              leftIcon={<MaterialCommunityIcons name="credit-card-clock-outline" size={20} />}
+            />
+          </View>
+        </MotiView>
       </View>
-    </MotiView>
-  );
+    );
+  };
 
   // --- Step 3: Review & Confirm ---
 
@@ -623,213 +752,336 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
         ? 'Family-Owned'
         : '--';
 
-    return (
-      <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400 }}
-      >
-        <Text style={[styles.stepTitle, { color: colors.text }]}>
-          Review Your Application
-        </Text>
-        <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>
-          Please verify all details before submitting
-        </Text>
-
-        {/* Loan Information */}
-        <View style={[styles.reviewCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.reviewCardHeader}>
-            <View style={styles.reviewCardTitleRow}>
-              <View style={[styles.reviewCardIcon, { backgroundColor: 'rgba(200,133,10,0.12)' }]}>
-                <MaterialCommunityIcons name="file-document-outline" size={14} color="#C8850A" />
-              </View>
-              <Text style={[styles.reviewCardTitle, { color: colors.text }]}>
-                Loan Information
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => setStep(0)}
-              hitSlop={8}
-              style={[styles.editBtn, { backgroundColor: 'rgba(200,133,10,0.12)' }]}
-            >
-              <MaterialCommunityIcons name="pencil" size={12} color="#C8850A" />
-              <Text style={[styles.editText, { color: colors.primary }]}>Edit</Text>
-            </Pressable>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Type</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {application.loanType ? LOAN_TYPE_LABELS[application.loanType] : '--'}
-            </Text>
-          </View>
-          <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Amount</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {formatCurrency(application.amount)}
-            </Text>
-          </View>
-          <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Tenure</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {application.tenure} months
-            </Text>
-          </View>
-          <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Monthly EMI</Text>
-            <Text style={[styles.reviewValueHighlight, { color: colors.primary }]}>
-              {formatCurrency(emiResult.emi)}
-            </Text>
-          </View>
-          <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Interest Rate</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {application.interestRate}% p.a.
-            </Text>
-          </View>
+    // Helper to render a review data row with icon
+    const ReviewItem = ({
+      icon,
+      iconColor,
+      iconBg,
+      label,
+      value,
+      highlight,
+    }: {
+      icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+      iconColor: string;
+      iconBg: string;
+      label: string;
+      value: string;
+      highlight?: boolean;
+    }) => (
+      <View style={styles.rvItemRow}>
+        <View style={[styles.rvItemIcon, { backgroundColor: iconBg }]}>
+          <MaterialCommunityIcons name={icon} size={14} color={iconColor} />
         </View>
-
-        {/* Personal Details */}
-        <View style={[styles.reviewCard, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 14 }]}>
-          <View style={styles.reviewCardHeader}>
-            <View style={styles.reviewCardTitleRow}>
-              <View style={[styles.reviewCardIcon, { backgroundColor: 'rgba(59,130,246,0.12)' }]}>
-                <MaterialCommunityIcons name="account-outline" size={14} color="#3B82F6" />
-              </View>
-              <Text style={[styles.reviewCardTitle, { color: colors.text }]}>
-                Personal Details
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => setStep(2)}
-              hitSlop={8}
-              style={[styles.editBtn, { backgroundColor: 'rgba(200,133,10,0.12)' }]}
-            >
-              <MaterialCommunityIcons name="pencil" size={12} color="#C8850A" />
-              <Text style={[styles.editText, { color: colors.primary }]}>Edit</Text>
-            </Pressable>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Employment</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {employmentLabel}
-            </Text>
-          </View>
-          {application.companyName ? (
-            <>
-              <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.reviewRow}>
-                <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Company</Text>
-                <Text style={[styles.reviewValue, { color: colors.text }]}>
-                  {application.companyName}
-                </Text>
-              </View>
-            </>
-          ) : null}
-          <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Residence</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {residentialLabel}
-            </Text>
-          </View>
-        </View>
-
-        {/* Financial Summary */}
-        <View style={[styles.reviewCard, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 14 }]}>
-          <View style={styles.reviewCardTitleRow}>
-            <View style={[styles.reviewCardIcon, { backgroundColor: 'rgba(34,197,94,0.12)' }]}>
-              <MaterialCommunityIcons name="chart-bar" size={14} color="#22C55E" />
-            </View>
-            <Text style={[styles.reviewCardTitle, { color: colors.text }]}>
-              Financial Summary
-            </Text>
-          </View>
-          <View style={{ height: 12 }} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Monthly Income</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {formatCurrency(application.monthlyIncome)}
-            </Text>
-          </View>
-          <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Monthly Expenses</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {formatCurrency(application.monthlyExpenses)}
-            </Text>
-          </View>
-          <View style={[styles.reviewDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.reviewRow}>
-            <Text style={[styles.reviewLabel, { color: colors.textMuted }]}>Existing EMIs</Text>
-            <Text style={[styles.reviewValue, { color: colors.text }]}>
-              {formatCurrency(application.existingEmi)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Terms & Consent */}
-        <View style={styles.checkboxSection}>
-          <Pressable
-            onPress={() => setTermsAccepted((prev) => !prev)}
+        <View style={styles.rvItemText}>
+          <Text style={[styles.rvItemLabel, { color: colors.textMuted }]}>{label}</Text>
+          <Text
             style={[
-              styles.checkboxRow,
-              {
-                backgroundColor: termsAccepted ? 'rgba(200,133,10,0.08)' : colors.surface,
-                borderColor: termsAccepted ? colors.primary : colors.border,
-              },
+              styles.rvItemValue,
+              { color: highlight ? colors.primary : colors.text },
+              highlight && { fontWeight: '700', fontSize: 15 },
             ]}
+            numberOfLines={1}
           >
-            <MaterialCommunityIcons
-              name={termsAccepted ? 'checkbox-marked' : 'checkbox-blank-outline'}
-              size={24}
-              color={termsAccepted ? colors.primary : colors.textMuted}
-            />
-            <View style={styles.checkboxTextCol}>
-              <Text style={[styles.checkboxLabel, { color: colors.text }]}>
-                I agree to the Terms & Conditions
+            {value}
+          </Text>
+        </View>
+      </View>
+    );
+
+    return (
+      <View>
+        {/* Hero Header with EMI highlight */}
+        <MotiView
+          from={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: 400 }}
+        >
+          <LinearGradient
+            colors={['#0B1426', '#162240']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.rvHeroGradient}
+          >
+            <View style={styles.rvHeroInner}>
+              <View style={styles.rvHeroBadge}>
+                <MaterialCommunityIcons name="shield-check-outline" size={12} color="#C8850A" />
+                <Text style={styles.rvHeroBadgeText}>Application Summary</Text>
+              </View>
+              <Text style={styles.rvHeroAmount}>{formatCurrency(application.amount)}</Text>
+              <Text style={styles.rvHeroSub}>
+                {application.loanType ? LOAN_TYPE_LABELS[application.loanType] : 'Loan'} for {application.tenure} months
               </Text>
+
+              {/* EMI pill */}
+              <View style={styles.rvEmiPill}>
+                <View style={styles.rvEmiPillRow}>
+                  <View style={styles.rvEmiPillItem}>
+                    <Text style={styles.rvEmiPillLabel}>Monthly EMI</Text>
+                    <Text style={styles.rvEmiPillValue}>{formatCurrency(emiResult.emi)}</Text>
+                  </View>
+                  <View style={styles.rvEmiPillDivider} />
+                  <View style={styles.rvEmiPillItem}>
+                    <Text style={styles.rvEmiPillLabel}>Interest Rate</Text>
+                    <Text style={styles.rvEmiPillValue}>{application.interestRate}% p.a.</Text>
+                  </View>
+                  <View style={styles.rvEmiPillDivider} />
+                  <View style={styles.rvEmiPillItem}>
+                    <Text style={styles.rvEmiPillLabel}>Total Payable</Text>
+                    <Text style={styles.rvEmiPillValue}>{formatCurrency(emiResult.totalPayable)}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </LinearGradient>
+        </MotiView>
+
+        {/* Loan Details Section */}
+        <MotiView
+          from={{ opacity: 0, translateY: 14 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 350, delay: 100 }}
+        >
+          <View style={[styles.rvSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.rvSectionHeader}>
+              <View style={styles.rvSectionTitleRow}>
+                <View style={[styles.rvSectionIconBg, { backgroundColor: 'rgba(200,133,10,0.10)' }]}>
+                  <MaterialCommunityIcons name="file-document-outline" size={16} color="#C8850A" />
+                </View>
+                <Text style={[styles.rvSectionTitle, { color: colors.text }]}>Loan Details</Text>
+              </View>
               <Pressable
-                onPress={() =>
-                  Toast.show({
-                    type: 'info',
-                    text1: 'Terms & Conditions',
-                    text2: 'Terms would open here',
-                  })
-                }
+                onPress={() => setStep(0)}
                 hitSlop={8}
+                style={({ pressed }) => [styles.rvEditBtn, pressed && { opacity: 0.7 }]}
               >
-                <Text style={[styles.readTermsText, { color: colors.primary }]}>
-                  Read Terms
-                </Text>
+                <MaterialCommunityIcons name="pencil-outline" size={14} color="#C8850A" />
               </Pressable>
             </View>
-          </Pressable>
+            <View style={styles.rvItemsGrid}>
+              <ReviewItem
+                icon="tag-outline"
+                iconColor="#C8850A"
+                iconBg="rgba(200,133,10,0.08)"
+                label="Loan Type"
+                value={application.loanType ? LOAN_TYPE_LABELS[application.loanType] : '--'}
+              />
+              <ReviewItem
+                icon="cash"
+                iconColor="#22C55E"
+                iconBg="rgba(34,197,94,0.08)"
+                label="Loan Amount"
+                value={formatCurrency(application.amount)}
+              />
+              <ReviewItem
+                icon="calendar-month-outline"
+                iconColor="#3B82F6"
+                iconBg="rgba(59,130,246,0.08)"
+                label="Tenure"
+                value={`${application.tenure} months`}
+              />
+              <ReviewItem
+                icon="percent-outline"
+                iconColor="#8B5CF6"
+                iconBg="rgba(139,92,246,0.08)"
+                label="Total Interest"
+                value={formatCurrency(emiResult.totalInterest)}
+              />
+            </View>
+          </View>
+        </MotiView>
 
-          <Pressable
-            onPress={() => setConsentAccepted((prev) => !prev)}
-            style={[
-              styles.checkboxRow,
-              {
-                backgroundColor: consentAccepted ? 'rgba(200,133,10,0.08)' : colors.surface,
-                borderColor: consentAccepted ? colors.primary : colors.border,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name={consentAccepted ? 'checkbox-marked' : 'checkbox-blank-outline'}
-              size={24}
-              color={consentAccepted ? colors.primary : colors.textMuted}
-            />
-            <Text style={[styles.checkboxLabel, { color: colors.text, flex: 1, marginLeft: 12 }]}>
-              I authorize LendEase to verify my credit information
-            </Text>
-          </Pressable>
-        </View>
-      </MotiView>
+        {/* Employment & Personal Section */}
+        <MotiView
+          from={{ opacity: 0, translateY: 14 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 350, delay: 200 }}
+        >
+          <View style={[styles.rvSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.rvSectionHeader}>
+              <View style={styles.rvSectionTitleRow}>
+                <View style={[styles.rvSectionIconBg, { backgroundColor: 'rgba(59,130,246,0.10)' }]}>
+                  <MaterialCommunityIcons name="account-outline" size={16} color="#3B82F6" />
+                </View>
+                <Text style={[styles.rvSectionTitle, { color: colors.text }]}>Personal Details</Text>
+              </View>
+              <Pressable
+                onPress={() => setStep(2)}
+                hitSlop={8}
+                style={({ pressed }) => [styles.rvEditBtn, pressed && { opacity: 0.7 }]}
+              >
+                <MaterialCommunityIcons name="pencil-outline" size={14} color="#C8850A" />
+              </Pressable>
+            </View>
+            <View style={styles.rvItemsGrid}>
+              <ReviewItem
+                icon="briefcase-outline"
+                iconColor="#3B82F6"
+                iconBg="rgba(59,130,246,0.08)"
+                label="Employment"
+                value={employmentLabel}
+              />
+              {application.companyName ? (
+                <ReviewItem
+                  icon="office-building-outline"
+                  iconColor="#8B5CF6"
+                  iconBg="rgba(139,92,246,0.08)"
+                  label="Company"
+                  value={application.companyName}
+                />
+              ) : null}
+              <ReviewItem
+                icon="home-outline"
+                iconColor="#0EA5E9"
+                iconBg="rgba(14,165,233,0.08)"
+                label="Residence"
+                value={residentialLabel}
+              />
+            </View>
+          </View>
+        </MotiView>
+
+        {/* Financial Summary Section */}
+        <MotiView
+          from={{ opacity: 0, translateY: 14 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 350, delay: 300 }}
+        >
+          <View style={[styles.rvSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.rvSectionHeader}>
+              <View style={styles.rvSectionTitleRow}>
+                <View style={[styles.rvSectionIconBg, { backgroundColor: 'rgba(34,197,94,0.10)' }]}>
+                  <MaterialCommunityIcons name="chart-bar" size={16} color="#22C55E" />
+                </View>
+                <Text style={[styles.rvSectionTitle, { color: colors.text }]}>Financial Summary</Text>
+              </View>
+            </View>
+
+            {/* Stacked horizontal stats */}
+            <View style={styles.rvFinanceStats}>
+              <View style={[styles.rvFinStatCard, { backgroundColor: colors.surface }]}>
+                <MaterialCommunityIcons name="arrow-down-circle-outline" size={18} color="#22C55E" />
+                <View style={styles.rvFinStatText}>
+                  <Text style={[styles.rvFinStatLabel, { color: colors.textMuted }]}>Income</Text>
+                  <Text style={[styles.rvFinStatValue, { color: colors.text }]}>
+                    {formatCurrency(application.monthlyIncome)}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.rvFinStatCard, { backgroundColor: colors.surface }]}>
+                <MaterialCommunityIcons name="arrow-up-circle-outline" size={18} color="#EF4444" />
+                <View style={styles.rvFinStatText}>
+                  <Text style={[styles.rvFinStatLabel, { color: colors.textMuted }]}>Expenses</Text>
+                  <Text style={[styles.rvFinStatValue, { color: colors.text }]}>
+                    {formatCurrency(application.monthlyExpenses)}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.rvFinStatCard, { backgroundColor: colors.surface }]}>
+                <MaterialCommunityIcons name="credit-card-clock-outline" size={18} color="#F59E0B" />
+                <View style={styles.rvFinStatText}>
+                  <Text style={[styles.rvFinStatLabel, { color: colors.textMuted }]}>Existing EMIs</Text>
+                  <Text style={[styles.rvFinStatValue, { color: colors.text }]}>
+                    {formatCurrency(application.existingEmi)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Affordability indicator */}
+            <View style={[styles.rvAffordBar, { backgroundColor: colors.surface }]}>
+              <View style={styles.rvAffordRow}>
+                <MaterialCommunityIcons name="shield-check" size={16} color="#22C55E" />
+                <Text style={[styles.rvAffordLabel, { color: colors.textSecondary }]}>
+                  EMI-to-Income Ratio
+                </Text>
+                <Text style={[styles.rvAffordValue, {
+                  color: (emiResult.emi / (application.monthlyIncome || 1)) * 100 <= 50
+                    ? '#22C55E' : '#F59E0B',
+                }]}>
+                  {((emiResult.emi / (application.monthlyIncome || 1)) * 100).toFixed(1)}%
+                </Text>
+              </View>
+            </View>
+          </View>
+        </MotiView>
+
+        {/* Terms & Consent */}
+        <MotiView
+          from={{ opacity: 0, translateY: 14 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 350, delay: 400 }}
+        >
+          <View style={styles.rvConsentSection}>
+            <Pressable
+              onPress={() => setTermsAccepted((prev) => !prev)}
+              style={[
+                styles.rvConsentCard,
+                {
+                  backgroundColor: termsAccepted ? 'rgba(200,133,10,0.06)' : colors.card,
+                  borderColor: termsAccepted ? colors.primary : colors.border,
+                },
+              ]}
+            >
+              <View style={[
+                styles.rvCheckCircle,
+                {
+                  backgroundColor: termsAccepted ? colors.primary : 'transparent',
+                  borderColor: termsAccepted ? colors.primary : colors.textMuted,
+                },
+              ]}>
+                {termsAccepted && (
+                  <MaterialCommunityIcons name="check" size={14} color="#FFFFFF" />
+                )}
+              </View>
+              <View style={styles.rvConsentTextCol}>
+                <Text style={[styles.rvConsentLabel, { color: colors.text }]}>
+                  I agree to the Terms & Conditions
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    Toast.show({
+                      type: 'info',
+                      text1: 'Terms & Conditions',
+                      text2: 'Terms would open here',
+                    })
+                  }
+                  hitSlop={8}
+                >
+                  <Text style={[styles.rvReadTerms, { color: colors.primary }]}>
+                    Read Terms
+                  </Text>
+                </Pressable>
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setConsentAccepted((prev) => !prev)}
+              style={[
+                styles.rvConsentCard,
+                {
+                  backgroundColor: consentAccepted ? 'rgba(200,133,10,0.06)' : colors.card,
+                  borderColor: consentAccepted ? colors.primary : colors.border,
+                },
+              ]}
+            >
+              <View style={[
+                styles.rvCheckCircle,
+                {
+                  backgroundColor: consentAccepted ? colors.primary : 'transparent',
+                  borderColor: consentAccepted ? colors.primary : colors.textMuted,
+                },
+              ]}>
+                {consentAccepted && (
+                  <MaterialCommunityIcons name="check" size={14} color="#FFFFFF" />
+                )}
+              </View>
+              <Text style={[styles.rvConsentLabel, { color: colors.text, flex: 1 }]}>
+                I authorize LendEase to verify my credit information
+              </Text>
+            </Pressable>
+          </View>
+        </MotiView>
+      </View>
     );
   };
 
@@ -893,29 +1145,34 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
         transition={{ type: 'timing', duration: 400, delay: 500 }}
         style={styles.timelineContainer}
       >
-        {[
-          { label: 'Submitted', done: true, icon: 'check' as const },
-          { label: 'Under Review', done: false, icon: 'file-search' as const },
-          { label: 'Approved', done: false, icon: 'shield-check' as const },
-          { label: 'Disbursed', done: false, icon: 'bank-transfer' as const },
-        ].map((step, index) => (
-          <View key={step.label} style={styles.timelineStep}>
-            <View style={styles.timelineStepInner}>
-              {index > 0 && (
-                <View
-                  style={[
-                    styles.timelineConnector,
-                    { backgroundColor: step.done ? '#22C55E' : colors.border },
-                  ]}
-                />
-              )}
+        {/* Connector line behind dots */}
+        <View style={styles.timelineTrack}>
+          {[0, 1, 2].map((i) => (
+            <View
+              key={i}
+              style={[
+                styles.timelineConnector,
+                { backgroundColor: i === 0 ? '#22C55E' : colors.border },
+              ]}
+            />
+          ))}
+        </View>
+        {/* Steps row */}
+        <View style={styles.timelineStepsRow}>
+          {[
+            { label: 'Submitted', done: true, icon: 'check' as const },
+            { label: 'Review', done: false, icon: 'file-search' as const },
+            { label: 'Approved', done: false, icon: 'shield-check' as const },
+            { label: 'Disbursed', done: false, icon: 'bank-transfer' as const },
+          ].map((step) => (
+            <View key={step.label} style={styles.timelineStep}>
               <View
                 style={[
                   styles.timelineDot,
                   {
                     backgroundColor: step.done ? '#22C55E' : colors.surface,
                     borderWidth: step.done ? 0 : 2,
-                    borderColor: colors.border,
+                    borderColor: step.done ? '#22C55E' : colors.border,
                   },
                 ]}
               >
@@ -925,20 +1182,21 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
                   <MaterialCommunityIcons name={step.icon} size={10} color={colors.textMuted} />
                 )}
               </View>
+              <Text
+                style={[
+                  styles.timelineLabel,
+                  {
+                    color: step.done ? '#22C55E' : colors.textMuted,
+                    fontWeight: step.done ? '600' : '400',
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {step.label}
+              </Text>
             </View>
-            <Text
-              style={[
-                styles.timelineLabel,
-                {
-                  color: step.done ? '#22C55E' : colors.textMuted,
-                  fontWeight: step.done ? '600' : '400',
-                },
-              ]}
-            >
-              {step.label}
-            </Text>
-          </View>
-        ))}
+          ))}
+        </View>
       </MotiView>
 
       {/* Action Buttons */}
@@ -955,13 +1213,7 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.trackBtnGradient}
         >
           <Pressable
-            onPress={() => {
-              Toast.show({
-                type: 'info',
-                text1: 'Track',
-                text2: 'Application tracking opening...',
-              });
-            }}
+            onPress={() => navigation.navigate('TrackApplication')}
             style={styles.trackBtnInner}
           >
             <MaterialCommunityIcons name="radar" size={18} color="#FFFFFF" />
@@ -1062,32 +1314,36 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             )}
             <View style={[styles.nextBtnWrapper, currentStep === 0 && { flex: 1 }]}>
-              <LinearGradient
-                colors={canGoNext ? ['#C8850A', '#E8A830'] : [colors.surface, colors.surface]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.nextBtnGradient, !canGoNext && { opacity: 0.5 }]}
+              <Pressable
+                onPress={handleNext}
+                disabled={!canGoNext}
+                style={({ pressed }) => [
+                  { borderRadius: 14, overflow: 'hidden', opacity: !canGoNext ? 0.5 : pressed ? 0.9 : 1 },
+                ]}
               >
-                <Pressable
-                  onPress={handleNext}
-                  disabled={!canGoNext}
-                  style={styles.nextBtnInner}
+                <LinearGradient
+                  colors={canGoNext ? ['#C8850A', '#E8A830'] : [colors.surface, colors.surface]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.nextBtnGradient}
                 >
-                  <Text style={[
-                    styles.nextBtnText,
-                    { color: canGoNext ? '#FFFFFF' : colors.textMuted },
-                  ]}>
-                    {getNextButtonTitle()}
-                  </Text>
-                  {currentStep < 3 && (
-                    <MaterialCommunityIcons
-                      name="arrow-right"
-                      size={18}
-                      color={canGoNext ? '#FFFFFF' : colors.textMuted}
-                    />
-                  )}
-                </Pressable>
-              </LinearGradient>
+                  <View style={styles.nextBtnInner}>
+                    <Text style={[
+                      styles.nextBtnText,
+                      { color: canGoNext ? '#FFFFFF' : colors.textMuted },
+                    ]}>
+                      {getNextButtonTitle()}
+                    </Text>
+                    {currentStep < 3 && (
+                      <MaterialCommunityIcons
+                        name="arrow-right"
+                        size={18}
+                        color={canGoNext ? '#FFFFFF' : colors.textMuted}
+                      />
+                    )}
+                  </View>
+                </LinearGradient>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -1319,7 +1575,145 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Step 2: Details
+  // Step 2: Details — Section Headers
+  dtSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    marginTop: 4,
+    gap: 12,
+  },
+  dtSectionIconBg: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dtSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  dtSectionSub: {
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 1,
+  },
+
+  // Step 2: Details — Employment Type Cards
+  dtEmpGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  dtEmpCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    position: 'relative',
+  },
+  dtEmpIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  dtEmpLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+  dtEmpCheck: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Step 2: Details — Residential Cards
+  dtResGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  dtResCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    position: 'relative',
+  },
+  dtResIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  dtResLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  dtResCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Step 2: Details — Form Sections
+  dtFormSection: {
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  dtFormHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  dtFormHeaderIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dtFormHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  dtFormDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginBottom: 8,
+  },
+
+  // Legacy Step 2 styles (kept for compatibility)
   residentialSection: {
     marginTop: 8,
   },
@@ -1340,93 +1734,241 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Step 3: Review
-  reviewCard: {
-    borderRadius: 16,
+  // Step 3: Review — Hero
+  rvHeroGradient: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  rvHeroInner: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  rvHeroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(200,133,10,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 5,
+    marginBottom: 14,
+  },
+  rvHeroBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#E8A830',
+    letterSpacing: 0.3,
+  },
+  rvHeroAmount: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  rvHeroSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  rvEmiPill: {
+    marginTop: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    width: '100%',
+  },
+  rvEmiPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  rvEmiPillItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rvEmiPillLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.50)',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  rvEmiPillValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  rvEmiPillDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+
+  // Step 3: Review — Sections
+  rvSection: {
+    borderRadius: 18,
     padding: 18,
     borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  reviewCardHeader: {
+  rvSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  reviewCardTitleRow: {
+  rvSectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  reviewCardIcon: {
-    width: 26,
-    height: 26,
+  rvSectionIconBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  rvSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  rvEditBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(200,133,10,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Step 3: Review — Items Grid
+  rvItemsGrid: {
+    gap: 2,
+  },
+  rvItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  rvItemIcon: {
+    width: 28,
+    height: 28,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
-  reviewCardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 4,
-  },
-  editText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  reviewRow: {
+  rvItemText: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
   },
-  reviewDivider: {
-    height: StyleSheet.hairlineWidth,
-  },
-  reviewLabel: {
+  rvItemLabel: {
     fontSize: 13,
     fontWeight: '500',
   },
-  reviewValue: {
+  rvItemValue: {
     fontSize: 14,
     fontWeight: '600',
+    textAlign: 'right',
+    maxWidth: '55%',
   },
-  reviewValueHighlight: {
+
+  // Step 3: Review — Finance Stats
+  rvFinanceStats: {
+    gap: 8,
+  },
+  rvFinStatCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    gap: 12,
+  },
+  rvFinStatText: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rvFinStatLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  rvFinStatValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // Step 3: Review — Affordability Bar
+  rvAffordBar: {
+    marginTop: 12,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  rvAffordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rvAffordLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+  },
+  rvAffordValue: {
     fontSize: 15,
     fontWeight: '700',
   },
-  checkboxSection: {
-    marginTop: 24,
+
+  // Step 3: Review — Consent
+  rvConsentSection: {
+    marginTop: 8,
+    gap: 10,
   },
-  checkboxRow: {
+  rvConsentCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
     borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
+    padding: 16,
+    borderWidth: 1.5,
+    gap: 12,
   },
-  checkboxTextCol: {
-    marginLeft: 12,
+  rvCheckCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+  },
+  rvConsentTextCol: {
     flex: 1,
   },
-  checkboxLabel: {
+  rvConsentLabel: {
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
   },
-  readTermsText: {
+  rvReadTerms: {
     fontSize: 13,
     fontWeight: '600',
     marginTop: 4,
@@ -1496,26 +2038,31 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   timelineContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
     marginTop: 32,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
+    position: 'relative',
+    height: 60,
+  },
+  timelineTrack: {
+    position: 'absolute',
+    left: 16 + 32,
+    right: 16 + 32,
+    top: 11,
+    flexDirection: 'row',
+    height: 2,
+  },
+  timelineStepsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   timelineStep: {
     alignItems: 'center',
-    flex: 1,
-  },
-  timelineStepInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    width: 64,
   },
   timelineConnector: {
     height: 2,
     flex: 1,
-    marginRight: -1,
   },
   timelineDot: {
     width: 24,
@@ -1525,10 +2072,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timelineLabel: {
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'center',
     marginTop: 6,
-    maxWidth: 70,
   },
   successActions: {
     marginTop: 36,

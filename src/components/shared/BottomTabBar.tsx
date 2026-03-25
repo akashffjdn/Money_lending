@@ -1,14 +1,5 @@
-import React, { memo, useCallback, useEffect } from 'react';
-import { View, Pressable, StyleSheet, Platform, Text } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
+import { View, Pressable, StyleSheet, Platform, Text, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -34,8 +25,6 @@ const TAB_LABELS: Record<string, string> = {
 
 const CENTER_TAB_INDEX = 2;
 
-const SPRING_CONFIG = { damping: 12, stiffness: 350, mass: 0.8 };
-
 interface TabItemProps {
   routeName: string;
   isFocused: boolean;
@@ -54,28 +43,21 @@ const TabItem: React.FC<TabItemProps> = ({
   onPress,
   colors,
 }) => {
-  const scale = useSharedValue(1);
-
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    scale.value = withSequence(
-      withSpring(0.85, { damping: 15, stiffness: 400 }),
-      withSpring(1, SPRING_CONFIG),
-    );
     onPress();
   }, [onPress]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
 
   const iconName = TAB_ICONS[routeName] ?? 'circle';
   const label = TAB_LABELS[routeName] ?? routeName;
   const iconColor = isFocused ? colors.primary : colors.textMuted;
 
   return (
-    <Pressable onPress={handlePress} style={styles.tabItem}>
-      <Animated.View style={[styles.tabItemContent, animatedStyle]}>
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => [styles.tabItem, pressed && { opacity: 0.7 }]}
+    >
+      <View style={styles.tabItemContent}>
         <MaterialCommunityIcons
           name={(isFocused ? iconName : iconName + '-outline') as any}
           size={23}
@@ -100,7 +82,7 @@ const TabItem: React.FC<TabItemProps> = ({
             ]}
           />
         )}
-      </Animated.View>
+      </View>
     </Pressable>
   );
 };
@@ -109,21 +91,16 @@ const CenterTab: React.FC<{
   onPress: () => void;
   colors: { primary: string; primaryLight: string };
 }> = ({ onPress, colors }) => {
-  const pulseScale = useSharedValue(1);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    pulseScale.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 1250 }),
-        withTiming(1.0, { duration: 1250 }),
-      ),
-      -1,
-    );
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 1250, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 1250, useNativeDriver: true }),
+      ]),
+    ).start();
   }, []);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }));
 
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -132,15 +109,13 @@ const CenterTab: React.FC<{
 
   return (
     <Pressable onPress={handlePress} style={styles.centerTabPressable}>
-      <Animated.View
+      <View
         style={[
           styles.centerTabOuter,
-          {
-            shadowColor: colors.primary,
-          },
+          { shadowColor: colors.primary },
         ]}
       >
-        <Animated.View style={pulseStyle}>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <LinearGradient
             colors={[colors.primary, colors.primaryLight]}
             style={styles.centerTabGradient}
@@ -150,31 +125,44 @@ const CenterTab: React.FC<{
             <MaterialCommunityIcons name="plus" size={26} color="#FFFFFF" />
           </LinearGradient>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Pressable>
   );
 };
 
-const BottomTabBar: React.FC<BottomTabBarProps> = ({
+const BottomTabBar: React.FC<BottomTabBarProps & { hidden?: boolean }> = ({
   state,
   descriptors,
   navigation,
+  hidden = false,
 }) => {
   const { colors, mode } = useTheme();
   const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(0)).current;
 
   const needsBottomPadding = insets.bottom > 0;
+  const bottomOffset = needsBottomPadding ? insets.bottom : 12;
+
+  useEffect(() => {
+    Animated.timing(translateY, {
+      toValue: hidden ? 120 : 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [hidden, translateY]);
 
   return (
-    <View
+    <Animated.View
       style={[
         styles.container,
         {
-          bottom: needsBottomPadding ? insets.bottom : 12,
+          bottom: bottomOffset,
           backgroundColor: colors.card,
           borderColor: colors.border,
+          transform: [{ translateY }],
         },
       ]}
+      pointerEvents={hidden ? 'none' : 'auto'}
     >
       <View style={styles.tabRow}>
         {state.routes.map((route, index) => {
@@ -221,7 +209,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -234,17 +222,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'visible',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 12,
   },
   tabRow: {
     flex: 1,
@@ -276,20 +258,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   centerTabOuter: {
     width: 54,
     height: 54,
     borderRadius: 27,
-    marginTop: -26,
+    position: 'absolute',
+    top: -27,
     shadowOpacity: 0.35,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
-    ...Platform.select({
-      android: {
-        elevation: 12,
-      },
-    }),
+    elevation: 12,
   },
   centerTabGradient: {
     width: 54,

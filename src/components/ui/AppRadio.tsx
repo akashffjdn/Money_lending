@@ -1,9 +1,5 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
@@ -19,66 +15,6 @@ interface AppRadioProps {
   onSelect: (value: string) => void;
 }
 
-interface RadioItemProps {
-  option: RadioOption;
-  isSelected: boolean;
-  onPress: () => void;
-  colors: {
-    primary: string;
-    text: string;
-    border: string;
-    inputBorder: string;
-  };
-}
-
-const RadioItem: React.FC<RadioItemProps> = ({
-  option,
-  isSelected,
-  onPress,
-  colors,
-}) => {
-  const innerScale = useAnimatedStyle(() => ({
-    transform: [
-      {
-        scale: withSpring(isSelected ? 1 : 0, {
-          damping: 15,
-          stiffness: 200,
-        }),
-      },
-    ],
-    opacity: withSpring(isSelected ? 1 : 0),
-  }));
-
-  const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
-  };
-
-  return (
-    <Pressable onPress={handlePress} style={styles.option}>
-      <View
-        style={[
-          styles.outerCircle,
-          {
-            borderColor: isSelected ? colors.primary : colors.inputBorder,
-          },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.innerCircle,
-            { backgroundColor: colors.primary },
-            innerScale,
-          ]}
-        />
-      </View>
-      <Text style={[styles.label, { color: colors.text }]}>
-        {option.label}
-      </Text>
-    </Pressable>
-  );
-};
-
 const AppRadio: React.FC<AppRadioProps> = ({
   options,
   selectedValue,
@@ -86,17 +22,39 @@ const AppRadio: React.FC<AppRadioProps> = ({
 }) => {
   const { colors } = useTheme();
 
+  const handlePress = async (value: string) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onSelect(value);
+  };
+
   return (
     <View style={styles.container}>
-      {options.map((option) => (
-        <RadioItem
-          key={option.value}
-          option={option}
-          isSelected={selectedValue === option.value}
-          onPress={() => onSelect(option.value)}
-          colors={colors}
-        />
-      ))}
+      {options.map((option) => {
+        const isSelected = selectedValue === option.value;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => handlePress(option.value)}
+            style={styles.option}
+          >
+            <View
+              style={[
+                styles.outerCircle,
+                { borderColor: isSelected ? colors.primary : colors.inputBorder },
+              ]}
+            >
+              {isSelected && (
+                <View
+                  style={[styles.innerCircle, { backgroundColor: colors.primary }]}
+                />
+              )}
+            </View>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 };

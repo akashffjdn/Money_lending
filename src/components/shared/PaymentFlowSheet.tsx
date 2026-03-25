@@ -4,7 +4,6 @@ import React, {
   forwardRef,
   useImperativeHandle,
   memo,
-  useEffect,
   useRef,
 } from 'react';
 import {
@@ -15,13 +14,8 @@ import {
   Pressable,
   ActivityIndicator,
   Dimensions,
+  Animated,
 } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInDown,
-  SlideOutDown,
-} from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { MotiView } from '../../utils/MotiCompat';
@@ -63,7 +57,23 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
   const [success, setSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState('');
 
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
   const processingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const animateIn = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(overlayAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, damping: 18, stiffness: 140, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  const animateOut = useCallback((cb?: () => void) => {
+    Animated.parallel([
+      Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+    ]).start(cb);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     open: (id: string, amt: number, type?: string) => {
@@ -77,6 +87,7 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
         paymentMethods.find((m) => m.isDefault)?.id ?? paymentMethods[0]?.id ?? '',
       );
       setVisible(true);
+      setTimeout(animateIn, 50);
     },
     close: () => {
       handleClose();
@@ -88,7 +99,7 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
       clearTimeout(processingTimeoutRef.current);
       processingTimeoutRef.current = null;
     }
-    setVisible(false);
+    animateOut(() => setVisible(false));
   }, []);
 
   const handleContinue = useCallback(() => {
@@ -125,7 +136,6 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
     handleClose();
   }, [handleClose]);
 
-  // Estimate principal / interest split (placeholder)
   const estimatedPrincipal = Math.round(amount * 0.72);
   const estimatedInterest = amount - estimatedPrincipal;
 
@@ -137,47 +147,29 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
 
       <AppCard style={styles.summaryCard}>
         <View style={styles.summaryRow}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            Loan Type
-          </Text>
-          <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {loanType}
-          </Text>
+          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Loan Type</Text>
+          <Text style={[styles.summaryValue, { color: colors.text }]}>{loanType}</Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            Loan ID
-          </Text>
-          <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {loanId}
-          </Text>
+          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Loan ID</Text>
+          <Text style={[styles.summaryValue, { color: colors.text }]}>{loanId}</Text>
         </View>
-        <View
-          style={[styles.rowDivider, { backgroundColor: colors.border }]}
-        />
+        <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
         <View style={styles.summaryRow}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            EMI Amount
-          </Text>
-          <Text
-            style={[styles.summaryValue, styles.amountText, { color: colors.text }]}
-          >
+          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>EMI Amount</Text>
+          <Text style={[styles.summaryValue, styles.amountText, { color: colors.text }]}>
             {formatCurrency(amount)}
           </Text>
         </View>
         <View style={styles.breakdownContainer}>
           <View style={styles.breakdownRow}>
-            <Text style={[styles.breakdownLabel, { color: colors.textMuted }]}>
-              Principal
-            </Text>
+            <Text style={[styles.breakdownLabel, { color: colors.textMuted }]}>Principal</Text>
             <Text style={[styles.breakdownValue, { color: colors.textSecondary }]}>
               {formatCurrency(estimatedPrincipal)}
             </Text>
           </View>
           <View style={styles.breakdownRow}>
-            <Text style={[styles.breakdownLabel, { color: colors.textMuted }]}>
-              Interest
-            </Text>
+            <Text style={[styles.breakdownLabel, { color: colors.textMuted }]}>Interest</Text>
             <Text style={[styles.breakdownValue, { color: colors.textSecondary }]}>
               {formatCurrency(estimatedInterest)}
             </Text>
@@ -209,54 +201,33 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
                 {
                   borderColor: isSelected ? colors.primary : colors.border,
                   borderWidth: isSelected ? 2 : 1,
-                  backgroundColor: isSelected
-                    ? `${colors.primary}08`
-                    : colors.card,
+                  backgroundColor: isSelected ? `${colors.primary}08` : colors.card,
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.methodIconCircle,
-                  { backgroundColor: colors.surface },
-                ]}
-              >
+              <View style={[styles.methodIconCircle, { backgroundColor: colors.surface }]}>
                 <MaterialCommunityIcons
                   name={METHOD_ICONS[method.type] ?? 'credit-card'}
                   size={20}
                   color={colors.primary}
                 />
               </View>
-
               <View style={styles.methodInfo}>
-                <Text
-                  style={[styles.methodName, { color: colors.text }]}
-                  numberOfLines={1}
-                >
+                <Text style={[styles.methodName, { color: colors.text }]} numberOfLines={1}>
                   {method.name}
                 </Text>
-                <Text
-                  style={[styles.methodDetail, { color: colors.textMuted }]}
-                >
+                <Text style={[styles.methodDetail, { color: colors.textMuted }]}>
                   {method.detail}
                 </Text>
               </View>
-
               <View
                 style={[
                   styles.radioOuter,
-                  {
-                    borderColor: isSelected ? colors.primary : colors.border,
-                  },
+                  { borderColor: isSelected ? colors.primary : colors.border },
                 ]}
               >
                 {isSelected && (
-                  <View
-                    style={[
-                      styles.radioInner,
-                      { backgroundColor: colors.primary },
-                    ]}
-                  />
+                  <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />
                 )}
               </View>
             </Pressable>
@@ -294,44 +265,22 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
           <MotiView
             from={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              type: 'spring',
-              damping: 12,
-              stiffness: 120,
-              delay: 100,
-            }}
+            transition={{ type: 'spring', damping: 12, stiffness: 120, delay: 100 }}
           >
-            <View
-              style={[
-                styles.resultCircle,
-                { backgroundColor: `${colors.success}20` },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="check"
-                size={48}
-                color={colors.success}
-              />
+            <View style={[styles.resultCircle, { backgroundColor: `${colors.success}20` }]}>
+              <MaterialCommunityIcons name="check" size={48} color={colors.success} />
             </View>
           </MotiView>
-
-          <Text style={[styles.resultTitle, { color: colors.text }]}>
-            Payment Successful!
-          </Text>
-
+          <Text style={[styles.resultTitle, { color: colors.text }]}>Payment Successful!</Text>
           <Text style={[styles.resultAmount, { color: colors.success }]}>
             {formatCurrency(amount)}
           </Text>
-
           <View style={styles.resultInfo}>
-            <Text style={[styles.resultLabel, { color: colors.textMuted }]}>
-              Transaction ID
-            </Text>
+            <Text style={[styles.resultLabel, { color: colors.textMuted }]}>Transaction ID</Text>
             <Text style={[styles.resultValue, { color: colors.textSecondary }]}>
               {transactionId}
             </Text>
           </View>
-
           <View style={styles.actionRow}>
             <AppButton title="Done" onPress={handleDone} fullWidth />
           </View>
@@ -344,44 +293,20 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
         <MotiView
           from={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            type: 'spring',
-            damping: 12,
-            stiffness: 120,
-            delay: 100,
-          }}
+          transition={{ type: 'spring', damping: 12, stiffness: 120, delay: 100 }}
         >
-          <View
-            style={[
-              styles.resultCircle,
-              { backgroundColor: `${colors.error}20` },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="close"
-              size={48}
-              color={colors.error}
-            />
+          <View style={[styles.resultCircle, { backgroundColor: `${colors.error}20` }]}>
+            <MaterialCommunityIcons name="close" size={48} color={colors.error} />
           </View>
         </MotiView>
-
-        <Text style={[styles.resultTitle, { color: colors.text }]}>
-          Payment Failed
-        </Text>
-
+        <Text style={[styles.resultTitle, { color: colors.text }]}>Payment Failed</Text>
         <Text style={[styles.resultSubtext, { color: colors.textSecondary }]}>
           Insufficient funds or network error
         </Text>
-
         <View style={styles.failedActions}>
           <AppButton title="Retry" onPress={handleRetry} fullWidth />
           <View style={styles.failedSpacer} />
-          <AppButton
-            title="Try Another Method"
-            onPress={handleRetry}
-            fullWidth
-            variant="secondary"
-          />
+          <AppButton title="Try Another Method" onPress={handleRetry} fullWidth variant="secondary" />
         </View>
       </View>
     );
@@ -389,14 +314,10 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
 
   const renderStepContent = () => {
     switch (step) {
-      case 0:
-        return renderSummaryStep();
-      case 1:
-        return renderMethodStep();
-      case 2:
-        return renderProcessingStep();
-      case 3:
-        return renderResultStep();
+      case 0: return renderSummaryStep();
+      case 1: return renderMethodStep();
+      case 2: return renderProcessingStep();
+      case 3: return renderResultStep();
     }
   };
 
@@ -408,49 +329,27 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
       statusBarTranslucent
       onRequestClose={step !== 2 ? handleClose : undefined}
     >
-      <Animated.View
-        entering={FadeIn.duration(200)}
-        exiting={FadeOut.duration(200)}
-        style={styles.overlay}
-      >
-        <Pressable
-          style={styles.overlayPressable}
-          onPress={step !== 2 ? handleClose : undefined}
-        />
+      <View style={styles.overlay}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
+          <Pressable style={styles.overlayPressable} onPress={step !== 2 ? handleClose : undefined} />
+        </Animated.View>
 
         <Animated.View
-          entering={SlideInDown.springify().damping(18).stiffness(140)}
-          exiting={SlideOutDown.duration(250)}
-          style={[styles.sheet, { backgroundColor: colors.card }]}
+          style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}
         >
-          {/* Handle bar */}
           <View style={styles.handleBar}>
-            <View
-              style={[
-                styles.handle,
-                { backgroundColor: colors.border },
-              ]}
-            />
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
           </View>
 
-          {/* Close button (hidden during processing) */}
           {step !== 2 && (
-            <Pressable
-              style={styles.closeButton}
-              onPress={handleClose}
-              hitSlop={8}
-            >
-              <MaterialCommunityIcons
-                name="close"
-                size={22}
-                color={colors.textMuted}
-              />
+            <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
+              <MaterialCommunityIcons name="close" size={22} color={colors.textMuted} />
             </Pressable>
           )}
 
           {renderStepContent()}
         </Animated.View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 });
@@ -460,7 +359,6 @@ PaymentFlowSheet.displayName = 'PaymentFlowSheet';
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   overlayPressable: {
@@ -498,154 +396,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 16,
   },
-  summaryCard: {
-    marginBottom: 16,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    fontWeight: '400',
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  amountText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  rowDivider: {
-    height: 1,
-    marginVertical: 4,
-  },
-  breakdownContainer: {
-    paddingLeft: 16,
-    marginTop: 4,
-  },
-  breakdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  breakdownLabel: {
-    fontSize: 13,
-  },
-  breakdownValue: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  actionRow: {
-    marginTop: 20,
-    paddingBottom: 8,
-  },
-  methodsList: {
-    gap: 10,
-  },
-  methodOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: BorderRadius.md,
-    padding: 14,
-  },
-  methodIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  methodInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  methodName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  methodDetail: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  radioOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  processingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  processingText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 20,
-  },
-  processingHint: {
-    fontSize: 13,
-    marginTop: 8,
-  },
-  resultContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  resultCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resultTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginTop: 16,
-  },
-  resultAmount: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  resultSubtext: {
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  resultInfo: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  resultLabel: {
-    fontSize: 12,
-  },
-  resultValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  failedActions: {
-    width: '100%',
-    marginTop: 24,
-    paddingBottom: 8,
-  },
-  failedSpacer: {
-    height: 12,
-  },
+  summaryCard: { marginBottom: 16 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  summaryLabel: { fontSize: 14, fontWeight: '400' },
+  summaryValue: { fontSize: 14, fontWeight: '600' },
+  amountText: { fontSize: 18, fontWeight: '700' },
+  rowDivider: { height: 1, marginVertical: 4 },
+  breakdownContainer: { paddingLeft: 16, marginTop: 4 },
+  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  breakdownLabel: { fontSize: 13 },
+  breakdownValue: { fontSize: 13, fontWeight: '500' },
+  actionRow: { marginTop: 20, paddingBottom: 8 },
+  methodsList: { gap: 10 },
+  methodOption: { flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius.md, padding: 14 },
+  methodIconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  methodInfo: { flex: 1, marginLeft: 12 },
+  methodName: { fontSize: 14, fontWeight: '600' },
+  methodDetail: { fontSize: 13, marginTop: 2 },
+  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 12, height: 12, borderRadius: 6 },
+  processingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  processingText: { fontSize: 16, fontWeight: '600', marginTop: 20 },
+  processingHint: { fontSize: 13, marginTop: 8 },
+  resultContainer: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 16 },
+  resultCircle: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+  resultTitle: { fontSize: 22, fontWeight: '700', marginTop: 16 },
+  resultAmount: { fontSize: 28, fontWeight: '700', marginTop: 8 },
+  resultSubtext: { fontSize: 14, marginTop: 8, textAlign: 'center' },
+  resultInfo: { alignItems: 'center', marginTop: 16 },
+  resultLabel: { fontSize: 12 },
+  resultValue: { fontSize: 14, fontWeight: '500', marginTop: 4 },
+  failedActions: { width: '100%', marginTop: 24, paddingBottom: 8 },
+  failedSpacer: { height: 12 },
 });
 
 export default memo(PaymentFlowSheet);

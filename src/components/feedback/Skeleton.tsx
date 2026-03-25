@@ -1,12 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, type ViewStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, type ViewStyle } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 interface SkeletonProps {
@@ -23,21 +16,16 @@ const Skeleton: React.FC<SkeletonProps> = ({
   style,
 }) => {
   const { mode } = useTheme();
-  const opacity = useSharedValue(0.3);
+  const opacity = useRef(new Animated.Value(0.3)).current;
 
-  React.useEffect(() => {
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.7, { duration: 750 }),
-        withTiming(0.3, { duration: 750 })
-      ),
-      -1
-    );
-  }, [opacity]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.7, duration: 750, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.3, duration: 750, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, []);
 
   const backgroundColor = mode === 'dark' ? '#2D3748' : '#E5E7EB';
 
@@ -50,8 +38,8 @@ const Skeleton: React.FC<SkeletonProps> = ({
           borderRadius,
           backgroundColor,
           overflow: 'hidden',
+          opacity,
         },
-        animatedStyle,
         style,
       ]}
     />
@@ -87,15 +75,9 @@ const SkeletonAvatar: React.FC = () => {
 };
 
 const skeletonStyles = StyleSheet.create({
-  card: {
-    padding: 16,
-  },
-  gap: {
-    height: 8,
-  },
-  listGap: {
-    marginTop: 12,
-  },
+  card: { padding: 16 },
+  gap: { height: 8 },
+  listGap: { marginTop: 12 },
 });
 
 export { Skeleton, SkeletonCard, SkeletonList, SkeletonAvatar };

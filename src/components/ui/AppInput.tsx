@@ -1,19 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   TextInput,
   Text,
   StyleSheet,
+  Animated,
+  TouchableWithoutFeedback,
   type KeyboardTypeOptions,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
-  interpolate,
-  interpolateColor,
-} from 'react-native-reanimated';
 import { useTheme } from '../../hooks/useTheme';
 
 export interface AppInputProps {
@@ -21,6 +15,7 @@ export interface AppInputProps {
   value: string;
   onChangeText?: (text: string) => void;
   onBlur?: () => void;
+  onFocus?: () => void;
   placeholder?: string;
   error?: string;
   leftIcon?: React.ReactNode;
@@ -39,6 +34,7 @@ const AppInput: React.FC<AppInputProps> = ({
   value,
   onChangeText,
   onBlur: onBlurProp,
+  onFocus: onFocusProp,
   placeholder,
   error,
   leftIcon,
@@ -53,141 +49,210 @@ const AppInput: React.FC<AppInputProps> = ({
 }) => {
   const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
-  const labelPosition = useSharedValue(value ? 1 : 0);
-  const borderColorProgress = useSharedValue(0);
-  const shakeX = useSharedValue(0);
+  // Animation values
+  const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const focusAnim = useRef(new Animated.Value(0)).current;
   const prevError = useRef<string | undefined>(undefined);
 
-  useEffect(() => {
-    const isActive = isFocused || value.length > 0;
-    labelPosition.value = withTiming(isActive ? 1 : 0, { duration: 200 });
-  }, [isFocused, value, labelPosition]);
+  const hasValue = value.length > 0;
+  const isFloated = isFocused || hasValue;
 
+  // Float label animation
   useEffect(() => {
-    borderColorProgress.value = withTiming(isFocused ? 1 : 0, {
+    Animated.timing(labelAnim, {
+      toValue: isFloated ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [isFloated, labelAnim]);
+
+  // Focus glow animation
+  useEffect(() => {
+    Animated.timing(focusAnim, {
+      toValue: isFocused ? 1 : 0,
       duration: 200,
-    });
-  }, [isFocused, borderColorProgress]);
+      useNativeDriver: false,
+    }).start();
+  }, [isFocused, focusAnim]);
 
+  // Error shake
   useEffect(() => {
     if (error && error !== prevError.current) {
-      shakeX.value = withSequence(
-        withTiming(8, { duration: 50 }),
-        withTiming(-8, { duration: 50 }),
-        withTiming(6, { duration: 50 }),
-        withTiming(-6, { duration: 50 }),
-        withTiming(4, { duration: 50 }),
-        withTiming(-4, { duration: 50 }),
-        withTiming(0, { duration: 50 })
-      );
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      ]).start();
     }
     prevError.current = error;
-  }, [error, shakeX]);
+  }, [error, shakeAnim]);
 
-  const animatedLabelStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(labelPosition.value, [0, 1], [0, -24]);
-    const scale = interpolate(labelPosition.value, [0, 1], [1, 0.75]);
-
-    return {
-      transform: [{ translateY }, { scale }],
-    };
+  // Label interpolations
+  const labelTranslateY = labelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -12],
   });
 
-  const animatedBorderStyle = useAnimatedStyle(() => {
-    if (error) {
-      return { borderColor: colors.error };
-    }
-
-    const borderColor = interpolateColor(
-      borderColorProgress.value,
-      [0, 1],
-      [colors.inputBorder, colors.primary]
-    );
-
-    return { borderColor };
+  const labelScale = labelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.73],
   });
 
-  const animatedContainerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
-  }));
-
+  // Colors
   const labelColor = error
     ? colors.error
     : isFocused
     ? colors.primary
     : colors.textMuted;
 
-  const inputBgColor = error ? colors.errorMuted : colors.inputBg;
+  const borderColor = error
+    ? colors.error
+    : isFocused
+    ? colors.primary
+    : colors.inputBorder;
+
+  const inputBgColor = !editable
+    ? colors.surface
+    : error
+    ? colors.errorMuted
+    : colors.inputBg;
+
+  const iconColor = error
+    ? colors.error
+    : isFocused
+    ? colors.primary
+    : colors.textMuted;
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+    onFocusProp?.();
+  }, [onFocusProp]);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+    onBlurProp?.();
+  }, [onBlurProp]);
+
+  const handleContainerPress = useCallback(() => {
+    if (editable) {
+      inputRef.current?.focus();
+    }
+  }, [editable]);
 
   return (
-    <Animated.View style={[styles.wrapper, animatedContainerStyle]}>
-      <Animated.View
-        style={[
-          styles.inputContainer,
-          { backgroundColor: inputBgColor },
-          animatedBorderStyle,
-          multiline && styles.multilineContainer,
-          isFocused && {
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 2,
-          },
-        ]}
-      >
-        {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+    <Animated.View style={[styles.wrapper, { transform: [{ translateX: shakeAnim }] }]}>
+      <TouchableWithoutFeedback onPress={handleContainerPress}>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: inputBgColor,
+              borderColor,
+              borderWidth: isFocused ? 1.5 : 1,
+            },
+            multiline && styles.multilineContainer,
+            isFocused && {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.12,
+              shadowRadius: 8,
+              elevation: 2,
+            },
+          ]}
+        >
+          {leftIcon && (
+            <View style={styles.leftIcon}>
+              {React.isValidElement(leftIcon)
+                ? React.cloneElement(leftIcon as React.ReactElement<any>, {
+                    color: iconColor,
+                  })
+                : leftIcon}
+            </View>
+          )}
 
-        <View style={styles.inputWrapper}>
-          <Animated.Text
-            style={[
-              styles.label,
-              { color: labelColor },
-              animatedLabelStyle,
-            ]}
-            pointerEvents="none"
-          >
-            {label}
-          </Animated.Text>
-          <TextInput
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={isFocused ? placeholder : undefined}
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry={secureTextEntry}
-            maxLength={maxLength}
-            keyboardType={keyboardType}
-            autoCapitalize={autoCapitalize}
-            editable={editable}
-            multiline={multiline}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => { setIsFocused(false); onBlurProp?.(); }}
-            style={[
-              styles.textInput,
-              { color: colors.text },
-              multiline && styles.multilineInput,
-            ]}
-          />
+          <View style={[styles.inputWrapper, multiline && { alignSelf: 'stretch' }]}>
+            {label ? (
+              <Animated.Text
+                style={[
+                  styles.label,
+                  {
+                    color: labelColor,
+                    transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
+                    top: multiline ? 14 : undefined,
+                  },
+                ]}
+                pointerEvents="none"
+                numberOfLines={1}
+              >
+                {label}
+              </Animated.Text>
+            ) : null}
+
+            <TextInput
+              ref={inputRef}
+              value={value}
+              onChangeText={onChangeText}
+              placeholder={isFloated || !label ? placeholder : undefined}
+              placeholderTextColor={colors.textMuted + '80'}
+              secureTextEntry={secureTextEntry}
+              maxLength={maxLength}
+              keyboardType={keyboardType}
+              autoCapitalize={autoCapitalize}
+              editable={editable}
+              multiline={multiline}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              style={[
+                styles.textInput,
+                {
+                  color: editable ? colors.text : colors.textSecondary,
+                },
+                label ? { paddingTop: 10 } : { paddingTop: 0 },
+                multiline && styles.multilineInput,
+              ]}
+            />
+          </View>
+
+          {rightIcon && (
+            <View style={styles.rightIcon}>
+              {React.isValidElement(rightIcon)
+                ? React.cloneElement(rightIcon as React.ReactElement<any>, {
+                    color: iconColor,
+                  })
+                : rightIcon}
+            </View>
+          )}
         </View>
+      </TouchableWithoutFeedback>
 
-        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
-      </Animated.View>
-
-      <View style={styles.bottomRow}>
-        {error ? (
-          <Text style={[styles.errorText, { color: colors.error }]}>
-            {error}
-          </Text>
-        ) : (
-          <View />
-        )}
-        {showCharCount && maxLength && (
-          <Text style={[styles.charCount, { color: colors.textMuted }]}>
-            {value.length}/{maxLength}
-          </Text>
-        )}
-      </View>
+      {(error || (showCharCount && maxLength)) && (
+        <View style={styles.bottomRow}>
+          {error ? (
+            <Text style={[styles.errorText, { color: colors.error }]}>
+              {error}
+            </Text>
+          ) : (
+            <View />
+          )}
+          {showCharCount && maxLength && (
+            <Text
+              style={[
+                styles.charCount,
+                {
+                  color: value.length >= maxLength ? colors.error : colors.textMuted,
+                },
+              ]}
+            >
+              {value.length}/{maxLength}
+            </Text>
+          )}
+        </View>
+      )}
     </Animated.View>
   );
 };
@@ -199,66 +264,67 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
     borderRadius: 12,
-    height: 52,
-    paddingHorizontal: 16,
+    height: 56,
+    paddingHorizontal: 14,
   },
   multilineContainer: {
     height: 120,
     alignItems: 'flex-start',
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   inputWrapper: {
     flex: 1,
     justifyContent: 'center',
+    height: '100%',
   },
   label: {
     position: 'absolute',
     left: 0,
-    fontSize: 15,
-    fontWeight: '400',
+    fontWeight: '500',
     letterSpacing: 0.1,
-    transformOrigin: 'left center',
   },
   textInput: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '400',
+    fontWeight: '500',
     letterSpacing: 0.1,
     paddingVertical: 0,
-    paddingTop: 8,
-  },
+    outlineStyle: 'none',
+  } as any,
   multilineInput: {
     textAlignVertical: 'top',
-    paddingTop: 14,
+    paddingTop: 16,
   },
   leftIcon: {
-    marginRight: 10,
-    width: 20,
+    marginRight: 12,
+    width: 22,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   rightIcon: {
     marginLeft: 10,
-    width: 20,
+    width: 22,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 4,
-    minHeight: 20,
+    paddingHorizontal: 4,
+    minHeight: 16,
   },
   errorText: {
     fontSize: 12,
     fontWeight: '500',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
     flex: 1,
   },
   charCount: {
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '500',
   },
 });
 
