@@ -16,6 +16,7 @@ import Toast from 'react-native-toast-message';
 
 import { useTheme } from '../../hooks/useTheme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 import { ProfileStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Help'>;
@@ -409,6 +410,8 @@ const HelpScreen: React.FC<Props> = ({ navigation }) => {
             }
           />
         </View>
+
+        <MadeByFooter />
       </ScrollView>
     </ScreenWrapper>
   );

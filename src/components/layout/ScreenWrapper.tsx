@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
+import MadeByFooter from '../shared/MadeByFooter';
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ interface ScreenWrapperProps {
   onBack?: () => void;
   rightAction?: React.ReactNode;
   edges?: Edge[];
+  showFooter?: boolean;
 }
 
 const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
@@ -32,6 +34,7 @@ const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
   onBack,
   rightAction,
   edges,
+  showFooter = false,
 }) => {
   const { colors, mode } = useTheme();
 
@@ -93,6 +96,7 @@ const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
           }
         >
           {children}
+          {showFooter && <MadeByFooter />}
         </ScrollView>
       );
     }

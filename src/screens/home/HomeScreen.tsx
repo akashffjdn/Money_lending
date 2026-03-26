@@ -29,6 +29,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { getGreeting, formatDate } from '../../utils/formatDate';
 import { formatCurrency } from '../../utils/formatCurrency';
 
+import MadeByFooter from '../../components/shared/MadeByFooter';
 import AppCard from '../../components/ui/AppCard';
 import AppBadge from '../../components/ui/AppBadge';
 import AnimatedCounter from '../../components/shared/AnimatedCounter';
@@ -794,6 +795,8 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               ))}
             </View>
           </View>
+
+          <MadeByFooter />
         </ScrollView>
       )}
     </View>

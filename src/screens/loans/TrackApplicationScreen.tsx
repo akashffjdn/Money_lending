@@ -141,6 +141,7 @@ const TrackApplicationScreen: React.FC<Props> = ({ navigation, route }) => {
     <ScreenWrapper
       headerTitle="Track Application"
       onBack={handleGoBack}
+      showFooter
     >
       {/* Summary bar */}
       <MotiView

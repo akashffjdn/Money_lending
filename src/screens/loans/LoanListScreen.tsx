@@ -27,6 +27,7 @@ import AppChip from '../../components/ui/AppChip';
 import AppBadge from '../../components/ui/AppBadge';
 import AnimatedCounter from '../../components/shared/AnimatedCounter';
 import EmptyState from '../../components/feedback/EmptyState';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 import { Skeleton } from '../../components/feedback/Skeleton';
 
 import type { Loan, LoanType, LoanStatus } from '../../types/loan';
@@ -463,6 +464,7 @@ const LoanListScreen: React.FC<Props> = ({ navigation }) => {
             description="No loans match the selected filter"
           />
         }
+        ListFooterComponent={<MadeByFooter />}
       />
     </ScreenWrapper>
   );

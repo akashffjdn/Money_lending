@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types/navigation';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
 
@@ -251,6 +252,8 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
           <MaterialCommunityIcons name="lock" size={12} color="rgba(255,255,255,0.3)" />
           <Text style={styles.trustText}>256-BIT ENCRYPTED</Text>
         </View>
+
+        <MadeByFooter light />
       </View>
     </View>
   );

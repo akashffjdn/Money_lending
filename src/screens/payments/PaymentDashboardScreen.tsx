@@ -20,6 +20,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
 
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 import Section from '../../components/layout/Section';
 import Divider from '../../components/layout/Divider';
 import AppCard from '../../components/ui/AppCard';
@@ -569,7 +570,7 @@ const PaymentDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </MotiView>
 
-      <View style={styles.bottomSpacer} />
+      <MadeByFooter />
 
       {/* Payment Flow Sheets */}
       <BulkPaymentSheet ref={bulkPaymentRef} />

@@ -21,6 +21,7 @@ import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import AppCard from '../../components/ui/AppCard';
 import AppChip from '../../components/ui/AppChip';
 import EmptyState from '../../components/feedback/EmptyState';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 
 import type { Payment, TransactionType, PaymentStatus } from '../../types/payment';
 import { BorderRadius, Spacing } from '../../constants/spacing';
@@ -434,6 +435,7 @@ const PaymentHistoryScreen: React.FC<Props> = ({ navigation }) => {
             description={`No payment history for ${selectedMonth}`}
           />
         }
+        ListFooterComponent={<MadeByFooter />}
       />
     </ScreenWrapper>
   );

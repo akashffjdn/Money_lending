@@ -16,6 +16,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types/navigation';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
 
@@ -368,6 +369,8 @@ const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
           )}
         </MotiView>
+
+        <MadeByFooter />
       </View>
     </View>
   );

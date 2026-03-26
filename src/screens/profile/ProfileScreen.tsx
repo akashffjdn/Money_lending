@@ -25,6 +25,7 @@ import AppAvatar from '../../components/ui/AppAvatar';
 import AppBadge from '../../components/ui/AppBadge';
 import AppSwitch from '../../components/ui/AppSwitch';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 import LanguageSheet, { type LanguageSheetRef } from '../../components/shared/LanguageSheet';
 import { ProfileStackParamList } from '../../types/navigation';
 
@@ -583,6 +584,8 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       <Text style={[styles.versionText, { color: colors.textMuted }]}>
         LendEase v1.0.0 (Build 1)
       </Text>
+
+      <MadeByFooter />
 
       <LanguageSheet ref={languageRef} />
     </ScreenWrapper>

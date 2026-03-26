@@ -17,6 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types/navigation';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
+import MadeByFooter from '../../components/shared/MadeByFooter';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -270,6 +271,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               Privacy Policy
             </Text>
           </Text>
+
+          <MadeByFooter />
         </MotiView>
       </KeyboardAvoidingView>
     </View>
