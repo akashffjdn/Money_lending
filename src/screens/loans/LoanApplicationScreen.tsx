@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import { MotiView } from '../../utils/MotiCompat';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../hooks/useTheme';
@@ -31,6 +30,7 @@ import AppInput from '../../components/ui/AppInput';
 import AppSlider from '../../components/ui/AppSlider';
 import AnimatedCounter from '../../components/shared/AnimatedCounter';
 import StepIndicator from '../../components/shared/StepIndicator';
+import TermsSheet, { type TermsSheetRef } from '../../components/shared/TermsSheet';
 
 import type { LoanType } from '../../types/loan';
 
@@ -121,6 +121,9 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
   const updateApplication = useLoanApplicationStore((s) => s.updateApplication);
   const submitApplication = useLoanApplicationStore((s) => s.submitApplication);
   const resetApplication = useLoanApplicationStore((s) => s.resetApplication);
+
+  // Terms sheet ref
+  const termsSheetRef = useRef<TermsSheetRef>(null);
 
   // Local state for checkboxes on review step
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -1068,13 +1071,7 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
                   I agree to the Terms & Conditions
                 </Text>
                 <Pressable
-                  onPress={() =>
-                    Toast.show({
-                      type: 'info',
-                      text1: 'Terms & Conditions',
-                      text2: 'Terms would open here',
-                    })
-                  }
+                  onPress={() => termsSheetRef.current?.open()}
                   hitSlop={8}
                 >
                   <Text style={[styles.rvReadTerms, { color: colors.primary }]}>
@@ -1378,6 +1375,7 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
       )}
+      <TermsSheet ref={termsSheetRef} />
     </ScreenWrapper>
   );
 };
