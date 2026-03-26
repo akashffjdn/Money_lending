@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { KYCOverallStatus, KYCStep, KYCData, KYCStepStatus } from '../types/kyc';
+import { useAuthStore } from './authStore';
 
 const initialSteps: KYCStep[] = [
   { id: 1, name: 'PAN Card', status: 'not_started' },
@@ -72,6 +73,11 @@ export const useKYCStore = create<KYCStore>((set) => ({
         overallStatus = 'in_progress';
       }
 
+      // Sync with authStore
+      if (overallStatus === 'in_progress') {
+        useAuthStore.getState().updateProfile({ kycStatus: 'in_progress' });
+      }
+
       return {
         steps: updatedSteps,
         currentStep: nextStep,
@@ -84,18 +90,32 @@ export const useKYCStore = create<KYCStore>((set) => ({
       data: { ...state.data, ...partial },
     })),
 
-  submitKYC: () =>
+  submitKYC: () => {
     set({
       overallStatus: 'under_review',
       isLoading: false,
-    }),
+    });
+    // Sync with authStore
+    useAuthStore.getState().updateProfile({ kycStatus: 'under_review' });
 
-  resetKYC: () =>
+    // Mock: Auto-verify after 3 seconds and assign credit score
+    setTimeout(() => {
+      set({ overallStatus: 'verified' });
+      useAuthStore.getState().updateProfile({
+        kycStatus: 'verified',
+        creditScore: 742,
+      });
+    }, 3000);
+  },
+
+  resetKYC: () => {
     set({
       overallStatus: 'not_started',
       currentStep: 1,
       steps: initialSteps.map((s) => ({ ...s })),
       data: { ...initialData },
       isLoading: false,
-    }),
+    });
+    useAuthStore.getState().updateProfile({ kycStatus: 'not_started' });
+  },
 }));

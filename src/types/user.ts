@@ -7,6 +7,6 @@ export interface User {
   gender: 'Male' | 'Female' | 'Other';
   profileComplete: boolean;
   kycStatus: 'not_started' | 'in_progress' | 'under_review' | 'verified' | 'rejected';
-  creditScore: number;
+  creditScore: number | null;
   avatar?: string;
 }

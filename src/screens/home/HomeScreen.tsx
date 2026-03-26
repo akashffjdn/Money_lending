@@ -33,6 +33,7 @@ import AppCard from '../../components/ui/AppCard';
 import AppBadge from '../../components/ui/AppBadge';
 import AnimatedCounter from '../../components/shared/AnimatedCounter';
 import ProgressRing from '../../components/shared/ProgressRing';
+import CreditScoreGauge from '../../components/shared/CreditScoreGauge';
 import EmptyState from '../../components/feedback/EmptyState';
 import { Skeleton } from '../../components/feedback/Skeleton';
 
@@ -236,10 +237,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Data
-  const creditScore = user?.creditScore ?? 742;
-  const creditLabel = getCreditLabel(creditScore);
-  const creditColor = getCreditColor(creditScore);
-  const creditProgress = (creditScore / 900) * 100;
+  const creditScore = user?.creditScore;
+  const hasCreditScore = creditScore !== null && creditScore !== undefined;
+  const creditLabel = hasCreditScore ? getCreditLabel(creditScore) : '';
+  const creditColor = hasCreditScore ? getCreditColor(creditScore) : '#E8A830';
+  const creditProgress = hasCreditScore ? (creditScore / 900) * 100 : 0;
   const firstName = user?.name?.split(' ')[0] || 'User';
   const firstInitial = firstName.charAt(0).toUpperCase();
 
@@ -493,7 +495,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     toggleTheme();
   }, [toggleTheme]);
 
-  const HEADER_HEIGHT = insets.top + 64;
+  const HEADER_HEIGHT = insets.top + 72;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -507,19 +509,34 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         ]}
       >
         <LinearGradient
-          colors={['#0B1426', '#162240']}
+          colors={['#0A1220', '#0F1D35', '#132544']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
 
         <View style={styles.headerInner}>
-          {/* Left: Greeting */}
+          {/* Left: Avatar + Greeting */}
           <View style={styles.headerLeft}>
-            <Text style={styles.headerGreeting}>
-              {getGreeting()},{' '}
+            <Pressable
+              onPress={() => navigateToTab('ProfileTab')}
+              hitSlop={4}
+            >
+              <View style={styles.headerAvatarRing}>
+                <LinearGradient
+                  colors={['#C8850A', '#E8A830']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.headerAvatar}
+                >
+                  <Text style={styles.headerAvatarText}>{firstInitial}</Text>
+                </LinearGradient>
+              </View>
+            </Pressable>
+            <View style={styles.headerGreetingBlock}>
+              <Text style={styles.headerGreetingLabel}>{getGreeting()}</Text>
               <Text style={styles.headerName}>{firstName}</Text>
-            </Text>
+            </View>
           </View>
 
           {/* Right: Actions */}
@@ -542,19 +559,6 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             >
               <MaterialCommunityIcons name="bell-outline" size={20} color="rgba(255,255,255,0.85)" />
               {unreadCount > 0 && <NotificationBadge />}
-            </Pressable>
-            <Pressable
-              onPress={() => navigateToTab('ProfileTab')}
-              hitSlop={4}
-            >
-              <LinearGradient
-                colors={['#C8850A', '#E8A830']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.headerAvatar}
-              >
-                <Text style={styles.headerAvatarText}>{firstInitial}</Text>
-              </LinearGradient>
             </Pressable>
           </View>
         </View>
@@ -583,49 +587,98 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         >
           {/* ---- 1. CREDIT SCORE CARD ---- */}
           <MotiView
-            from={{ opacity: 0, translateY: 20 }}
+            from={{ opacity: 0, translateY: 24 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 500, delay: 200 }}
+            transition={{ type: 'timing', duration: 600, delay: 200 }}
             style={styles.creditCardOuter}
           >
             <LinearGradient
-              colors={['#0B1426', '#162240']}
+              colors={['#0C1528', '#101E38', '#0A1424']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.creditCard}
             >
-              <View style={styles.creditRow}>
-                <ProgressRing
-                  size={100}
-                  strokeWidth={8}
-                  progress={creditProgress}
-                  color={creditColor}
-                  bgColor="rgba(255,255,255,0.08)"
-                >
-                  <AnimatedCounter
-                    value={creditScore}
-                    prefix=""
-                    style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 }}
-                  />
-                </ProgressRing>
-
-                <View style={styles.creditInfo}>
-                  <Text style={styles.creditScoreLabel}>Credit Score</Text>
-                  <Text style={[styles.creditStatus, { color: creditColor }]}>
-                    {creditLabel}
-                  </Text>
-                  <View style={styles.creditScoreRange}>
-                    <View style={styles.creditRangeBar}>
-                      <View style={[styles.creditRangeIndicator, { left: `${creditProgress}%`, backgroundColor: creditColor }]} />
+              {hasCreditScore ? (
+                <>
+                  {/* Top row: label + updated */}
+                  <View style={styles.creditTopRow}>
+                    <View style={styles.creditLabelRow}>
+                      <MaterialCommunityIcons name="shield-check-outline" size={14} color="rgba(255,255,255,0.4)" />
+                      <Text style={styles.creditScoreLabel}>CREDIT SCORE</Text>
                     </View>
-                    <View style={styles.creditRangeLabels}>
-                      <Text style={styles.creditRangeText}>300</Text>
-                      <Text style={styles.creditRangeText}>900</Text>
+                    <Text style={styles.creditUpdated}>Updated 15 Mar 2026</Text>
+                  </View>
+
+                  {/* Center: gauge */}
+                  <View style={styles.creditGaugeWrap}>
+                    <CreditScoreGauge
+                      score={creditScore}
+                      size={125}
+                      strokeWidth={8}
+                      label={creditLabel}
+                      color={creditColor}
+                    />
+                  </View>
+
+                  {/* Bottom: score breakdown hints */}
+                  <View style={styles.creditBottomRow}>
+                    <View style={styles.creditStat}>
+                      <Text style={styles.creditStatValue}>98%</Text>
+                      <Text style={styles.creditStatLabel}>On-time</Text>
+                    </View>
+                    <View style={styles.creditStatDivider} />
+                    <View style={styles.creditStat}>
+                      <Text style={styles.creditStatValue}>3</Text>
+                      <Text style={styles.creditStatLabel}>Active Loans</Text>
+                    </View>
+                    <View style={styles.creditStatDivider} />
+                    <View style={styles.creditStat}>
+                      <Text style={styles.creditStatValue}>Low</Text>
+                      <Text style={styles.creditStatLabel}>Utilization</Text>
                     </View>
                   </View>
-                  <Text style={styles.creditUpdated}>Updated 15 Mar 2026</Text>
-                </View>
-              </View>
+                </>
+              ) : (
+                <>
+                  {/* Fresh user — teaser CTA */}
+                  <View style={styles.creditTeaserRow}>
+                    {/* Simple locked ring placeholder */}
+                    <View style={styles.creditTeaserGauge}>
+                      <View style={styles.creditTeaserRing}>
+                        <MaterialCommunityIcons name="lock-outline" size={20} color="rgba(255,255,255,0.35)" />
+                      </View>
+                      <Text style={styles.creditTeaserQuestion}>???</Text>
+                    </View>
+
+                    {/* Info + CTA */}
+                    <View style={styles.creditTeaserInfo}>
+                      <Text style={styles.creditTeaserTitle}>Know Your Credit Score</Text>
+                      <Text style={styles.creditTeaserDesc}>
+                        Free CIBIL score instantly. No impact on your score.
+                      </Text>
+                      <Pressable
+                        onPress={() => navigateToTab('ProfileTab', { screen: 'KYC' })}
+                        style={({ pressed }) => [
+                          styles.creditTeaserBtn,
+                          pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
+                        ]}
+                      >
+                        <Text style={styles.creditTeaserBtnText}>Check Free Score</Text>
+                        <MaterialCommunityIcons name="arrow-right" size={14} color="#0A1220" />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* Trust badges */}
+                  <View style={styles.creditTeaserTrust}>
+                    <MaterialCommunityIcons name="shield-check" size={10} color="rgba(255,255,255,0.25)" />
+                    <Text style={styles.creditTeaserTrustText}>Soft inquiry only</Text>
+                    <View style={styles.creditTeaserTrustDot} />
+                    <MaterialCommunityIcons name="lock" size={10} color="rgba(255,255,255,0.25)" />
+                    <Text style={styles.creditTeaserTrustText}>256-bit encrypted</Text>
+                  </View>
+                </>
+              )}
             </LinearGradient>
           </MotiView>
 
@@ -770,44 +823,63 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginRight: 16,
   },
-  headerGreeting: {
-    fontSize: 16,
+  headerAvatarRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(232,168,48,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  headerGreetingBlock: {
+    flexShrink: 1,
+  },
+  headerGreetingLabel: {
+    fontSize: 12,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 0.1,
+    color: 'rgba(255,255,255,0.45)',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   headerName: {
+    fontSize: 18,
     fontWeight: '700',
-    color: '#E8A830',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
   },
   headerIconBtn: {
     position: 'relative',
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 2,
-  },
-  headerAvatarText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
   },
   notifDot: {
     position: 'absolute',
@@ -825,67 +897,161 @@ const styles = StyleSheet.create({
   creditCardOuter: {
     marginHorizontal: 20,
     marginTop: 8,
-    shadowColor: '#C8850A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 28,
+    elevation: 12,
   },
   creditCard: {
     borderRadius: 20,
-    padding: 24,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
   },
-  creditRow: {
+  creditTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  creditInfo: {
-    flex: 1,
-    marginLeft: 20,
-  },
-  creditScoreLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    justifyContent: 'space-between',
     marginBottom: 4,
   },
-  creditStatus: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-    letterSpacing: -0.3,
-  },
-  creditScoreRange: {
-    marginBottom: 8,
-  },
-  creditRangeBar: {
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    position: 'relative',
-  },
-  creditRangeIndicator: {
-    position: 'absolute',
-    top: -2.5,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: -4,
-  },
-  creditRangeLabels: {
+  creditLabelRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
+    alignItems: 'center',
+    gap: 6,
   },
-  creditRangeText: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
+  creditScoreLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.45)',
+    letterSpacing: 1.2,
+    fontWeight: '600',
   },
   creditUpdated: {
-    fontSize: 11,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.25)',
+    letterSpacing: 0.2,
+  },
+  creditGaugeWrap: {
+    alignItems: 'center',
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  creditBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginTop: 6,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  creditStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  creditStatValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  creditStatLabel: {
+    fontSize: 10,
     color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 0.1,
+    marginTop: 2,
+    letterSpacing: 0.3,
+    fontWeight: '500',
+  },
+  creditStatDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+
+  // Credit Teaser (fresh user)
+  creditTeaserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 6,
+  },
+  creditTeaserGauge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  creditTeaserRing: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  creditTeaserQuestion: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.2)',
+    marginTop: 4,
+    letterSpacing: 1,
+  },
+  creditTeaserInfo: {
+    flex: 1,
+  },
+  creditTeaserTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+  creditTeaserDesc: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  creditTeaserBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#E8A830',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+  },
+  creditTeaserBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0A1220',
+  },
+  creditTeaserTrust: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    gap: 5,
+  },
+  creditTeaserTrustText: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.25)',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  creditTeaserTrustDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginHorizontal: 3,
   },
 
   // Quick Actions

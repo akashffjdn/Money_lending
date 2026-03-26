@@ -22,10 +22,6 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-/* ------------------------------------------------------------------ */
-/*  Slide data                                                         */
-/* ------------------------------------------------------------------ */
-
 interface SlideInfo {
   title: string;
   highlight: string;
@@ -37,22 +33,25 @@ interface SlideInfo {
 const SLIDES: SlideInfo[] = [
   {
     title: 'Get ',
-    highlight: 'Instant Loans',
-    subtitle: 'Approved in under 2 hours with minimal documentation and zero hidden charges',
-    accent: '#E8A830',
+    highlight: 'Instant Loans.',
+    subtitle:
+      'Approved in under 2 hours with minimal documentation and zero hidden charges.',
+    accent: '#22C55E',
     image: 'https://stories.freepiklabs.com/storage/45171/finance-app-bro-6655.png',
   },
   {
     title: 'Bank-Grade ',
-    highlight: 'Security',
-    subtitle: 'Your data is protected with 256-bit encryption and RBI-compliant processes',
-    accent: '#22C55E',
+    highlight: 'Security.',
+    subtitle:
+      'Institutional-level protection for your assets and data. Your trust is our foundation.',
+    accent: '#E8A830',
     image: 'https://stories.freepiklabs.com/storage/31166/security-cuate-5175.png',
   },
   {
     title: 'Smart ',
-    highlight: 'EMI Tracking',
-    subtitle: 'Auto-pay, reminders, and a unified dashboard for all your repayments',
+    highlight: 'EMI Tracking.',
+    subtitle:
+      'Auto-pay, reminders, and a unified dashboard for all your repayments.',
     accent: '#3B82F6',
     image: 'https://stories.freepiklabs.com/storage/23593/dashboard-bro-3022.png',
   },
@@ -66,7 +65,6 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
   const flatListRef = useRef<FlatList>(null);
   const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-rotate
   const startAutoSlide = useCallback(() => {
     if (autoTimerRef.current) clearInterval(autoTimerRef.current);
     autoTimerRef.current = setInterval(() => {
@@ -121,55 +119,42 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
     [startAutoSlide],
   );
 
-  const renderSlide = useCallback(({ item }: { item: SlideInfo; index: number }) => {
-    return (
-      <View style={styles.slide}>
-        {/* Real illustration image */}
-        <View style={styles.imageWrapper}>
-          <Image
-            source={{ uri: item.image }}
-            style={styles.slideImage}
-            resizeMode="contain"
-            defaultSource={undefined}
-          />
-          <ActivityIndicator
-            style={styles.imageLoader}
-            size="small"
-            color={item.accent}
-          />
-        </View>
+  const currentSlide = SLIDES[activeIndex];
 
-        {/* Text */}
-        <Text style={styles.slideTitle}>
-          {item.title}
-          <Text style={[styles.slideHighlight, { color: item.accent }]}>
-            {item.highlight}
-          </Text>
-        </Text>
-        <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
+  const renderSlide = useCallback(
+    ({ item }: { item: SlideInfo }) => (
+      <View style={styles.slide}>
+        <ActivityIndicator
+          size="small"
+          color={item.accent}
+          style={styles.imageLoader}
+        />
+        <Image
+          source={{ uri: item.image }}
+          style={styles.slideImage}
+          resizeMode="contain"
+        />
       </View>
-    );
-  }, []);
+    ),
+    [],
+  );
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#060B14', '#0B1426', '#0F1D35', '#0B1426']}
+        colors={['#040810', '#0A1220', '#0E1A2E', '#0A1220']}
         locations={[0, 0.3, 0.6, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* ---- Header: Brand + Skip ---- */}
-      <View style={[styles.headerRow, { paddingTop: insets.top + 12 }]}>
+      {/* Header */}
+      <View style={[styles.headerRow, { paddingTop: insets.top + 10 }]}>
         <View style={styles.brandRow}>
-          <LinearGradient
-            colors={['#C8850A', '#E8A830']}
-            style={styles.brandIcon}
-          >
-            <MaterialCommunityIcons name="cash-multiple" size={18} color="#FFF" />
-          </LinearGradient>
+          <View style={styles.brandIconWrap}>
+            <MaterialCommunityIcons name="bank" size={18} color="#E8A830" />
+          </View>
           <Text style={styles.brandName}>
-            Lend<Text style={styles.brandAccent}>Ease</Text>
+            LENDEASE
           </Text>
         </View>
         <Pressable
@@ -177,31 +162,43 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
           hitSlop={12}
           style={({ pressed }) => [styles.skipBtn, pressed && { opacity: 0.6 }]}
         >
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>SKIP</Text>
         </Pressable>
       </View>
 
-      {/* ---- Slides ---- */}
-      <View style={styles.slidesArea}>
-        <FlatList
-          ref={flatListRef}
-          data={SLIDES}
-          renderItem={renderSlide}
-          keyExtractor={(_, i) => String(i)}
-          horizontal
-          snapToInterval={SCREEN_WIDTH}
-          decelerationRate="fast"
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleScroll}
-          bounces={false}
-          getItemLayout={(_, index) => ({
-            length: SCREEN_WIDTH,
-            offset: SCREEN_WIDTH * index,
-            index,
-          })}
-        />
+      {/* Image carousel — plain images, no card */}
+      <FlatList
+        ref={flatListRef}
+        data={SLIDES}
+        renderItem={renderSlide}
+        keyExtractor={(_, i) => String(i)}
+        horizontal
+        pagingEnabled
+        snapToInterval={SCREEN_WIDTH}
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScroll}
+        bounces={false}
+        style={styles.carousel}
+        getItemLayout={(_, index) => ({
+          length: SCREEN_WIDTH,
+          offset: SCREEN_WIDTH * index,
+          index,
+        })}
+      />
 
-        {/* Pagination */}
+      {/* Title + subtitle + dots */}
+      <View style={styles.textSection}>
+        <Text style={styles.mainTitle}>
+          {currentSlide.title}
+          {'\n'}
+          <Text style={[styles.mainHighlight, { color: currentSlide.accent }]}>
+            {currentSlide.highlight}
+          </Text>
+        </Text>
+
+        <Text style={styles.mainSubtitle}>{currentSlide.subtitle}</Text>
+
         <View style={styles.pagination}>
           {SLIDES.map((s, i) => (
             <Pressable key={i} onPress={() => goToSlide(i)} hitSlop={8}>
@@ -218,8 +215,8 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* ---- Bottom CTA ---- */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 12 }]}>
+      {/* Bottom CTA */}
+      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 6 }]}>
         <Pressable
           onPress={handleGetStarted}
           style={({ pressed }) => [
@@ -228,7 +225,7 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
           ]}
         >
           <LinearGradient
-            colors={['#C8850A', '#E8A830']}
+            colors={['#C8850A', '#E8A830', '#D4960C']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.ctaGradient}
@@ -242,31 +239,27 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
 
         <Pressable onPress={handleLogin} hitSlop={12} style={styles.loginLink}>
           <Text style={styles.loginText}>
-            Already have an account?{' '}
+            Already have an account?{'  '}
             <Text style={styles.loginBold}>Log in</Text>
           </Text>
         </Pressable>
 
         <View style={styles.trustRow}>
           <MaterialCommunityIcons name="shield-check" size={12} color="rgba(255,255,255,0.3)" />
-          <Text style={styles.trustText}>RBI Regulated</Text>
+          <Text style={styles.trustText}>RBI REGULATED</Text>
           <View style={styles.trustDot} />
           <MaterialCommunityIcons name="lock" size={12} color="rgba(255,255,255,0.3)" />
-          <Text style={styles.trustText}>256-bit Encrypted</Text>
+          <Text style={styles.trustText}>256-BIT ENCRYPTED</Text>
         </View>
       </View>
     </View>
   );
 };
 
-/* ------------------------------------------------------------------ */
-/*  Styles                                                             */
-/* ------------------------------------------------------------------ */
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#060B14',
+    backgroundColor: '#040810',
   },
 
   /* Header */
@@ -275,81 +268,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingBottom: 8,
+    paddingBottom: 4,
     zIndex: 10,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
-  brandIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  brandIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(232,168,48,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandName: {
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#E8A830',
+    letterSpacing: 2,
   },
   brandAccent: {
     color: '#E8A830',
   },
   skipBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   skipText: {
     color: 'rgba(255,255,255,0.5)',
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1.5,
   },
 
-  /* Slides */
-  slidesArea: {
-    flex: 1,
+  /* Carousel */
+  carousel: {
+    flexGrow: 0,
+    height: 480,
   },
   slide: {
     width: SCREEN_WIDTH,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  slideTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    lineHeight: 34,
-    marginTop: 20,
-  },
-  slideHighlight: {
-    fontWeight: '800',
-  },
-  slideSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.45)',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginTop: 10,
-    paddingHorizontal: 8,
-  },
-
-  /* Image */
-  imageWrapper: {
-    width: SCREEN_WIDTH - 40,
-    height: 380,
+    height: 480,
     alignItems: 'center',
     justifyContent: 'center',
   },
   slideImage: {
-    width: SCREEN_WIDTH - 40,
-    height: 380,
+    width: SCREEN_WIDTH - 24,
+    height: 460,
     position: 'absolute',
     zIndex: 1,
   },
@@ -358,12 +329,37 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
 
-  /* Pagination */
+  /* Text section */
+  textSection: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 36,
+    paddingTop: 8,
+    marginBottom: 16,
+  },
+  mainTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 40,
+    letterSpacing: -0.5,
+  },
+  mainHighlight: {
+    fontWeight: '800',
+  },
+  mainSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginTop: 10,
+  },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    marginTop: 18,
     gap: 10,
   },
   dot: {
@@ -378,10 +374,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
 
-  /* Bottom */
+  /* Bottom CTA */
   bottomSection: {
     paddingHorizontal: 24,
-    marginTop: -8,
+    paddingTop: 16,
   },
   ctaPressable: {
     borderRadius: 16,
@@ -393,7 +389,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   ctaGradient: {
-    height: 56,
+    height: 54,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -415,7 +411,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loginLink: {
-    marginTop: 10,
+    marginTop: 16,
     alignItems: 'center',
   },
   loginText: {
@@ -430,7 +426,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: 14,
     gap: 6,
   },
   trustDot: {
@@ -442,8 +438,9 @@ const styles = StyleSheet.create({
   },
   trustText: {
     color: 'rgba(255,255,255,0.25)',
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.8,
   },
 });
 

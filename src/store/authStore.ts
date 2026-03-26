@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       email: '',
       dob: '',
       gender: 'Male' as const,
-      creditScore: 742,
+      creditScore: null,
       kycStatus: 'not_started' as const,
       profileComplete: false,
     };

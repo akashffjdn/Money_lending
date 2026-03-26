@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import AppButton from '../../components/ui/AppButton';
 import AnimatedCounter from '../../components/shared/AnimatedCounter';
 import Section from '../../components/layout/Section';
 import EmptyState from '../../components/feedback/EmptyState';
+import PaymentFlowSheet, { PaymentFlowRef } from '../../components/shared/PaymentFlowSheet';
 
 import type { Loan, LoanStatus, RepaymentEntry } from '../../types/loan';
 
@@ -108,6 +109,7 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { loanId } = route.params;
 
   const loan = useLoanStore((s) => s.getLoanById(loanId));
+  const paymentRef = useRef<PaymentFlowRef>(null);
 
   const [showAllSchedule, setShowAllSchedule] = useState(false);
 
@@ -124,21 +126,18 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handlePayNow = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Toast.show({
-      type: 'info',
-      text1: 'Payment',
-      text2: 'Payment flow opening...',
-    });
-  }, []);
+    if (loan) {
+      paymentRef.current?.open(loan.id, loan.emiAmount, loan.type);
+    }
+  }, [loan]);
 
   const handlePrepay = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Toast.show({
-      type: 'info',
-      text1: 'Prepayment',
-      text2: 'Prepayment flow opening...',
-    });
-  }, []);
+    if (loan) {
+      const outstanding = loan.totalPayable - (loan.emiAmount * loan.emiPaid);
+      paymentRef.current?.open(loan.id, outstanding, `${loan.type} - Prepayment`);
+    }
+  }, [loan]);
 
   const handleDownloadStatement = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -576,6 +575,7 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           </Pressable>
         </View>
       )}
+      <PaymentFlowSheet ref={paymentRef} />
     </ScreenWrapper>
   );
 };

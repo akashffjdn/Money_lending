@@ -8,11 +8,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Alert,
+  Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import { useForm, Controller } from 'react-hook-form';
 
@@ -52,6 +55,59 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const isDark = mode === 'dark';
 
   const [saving, setSaving] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatar);
+
+  const pickFromGallery = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Toast.show({ type: 'error', text1: 'Gallery permission denied' });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      setAvatarUri(uri);
+      authStore.updateProfile({ avatar: uri });
+      Toast.show({ type: 'success', text1: 'Photo updated' });
+    }
+  }, [authStore]);
+
+  const pickFromCamera = useCallback(async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Toast.show({ type: 'error', text1: 'Camera permission denied' });
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      setAvatarUri(uri);
+      authStore.updateProfile({ avatar: uri });
+      Toast.show({ type: 'success', text1: 'Photo updated' });
+    }
+  }, [authStore]);
+
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+
+  const handleChangePhoto = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'web') {
+      // On web, directly open gallery (camera not available)
+      pickFromGallery();
+    } else {
+      setShowPhotoOptions(true);
+    }
+  }, [pickFromGallery]);
 
   // Entry animations
   const avatarAnim = useRef(new Animated.Value(0)).current;
@@ -155,15 +211,17 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
             end={{ x: 1, y: 1 }}
           >
             <View style={[styles.avatarInnerRing, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-              <AppAvatar size={88} name={user?.name ?? 'U'} />
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <AppAvatar size={88} name={user?.name ?? 'U'} />
+              )}
             </View>
           </LinearGradient>
         </View>
 
         <Pressable
-          onPress={() =>
-            Toast.show({ type: 'info', text1: 'Change Photo' })
-          }
+          onPress={handleChangePhoto}
           hitSlop={8}
           style={({ pressed }) => [
             styles.changePhotoBtn,
@@ -435,6 +493,67 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
           fullWidth
         />
       </Animated.View>
+
+      {/* Photo Options Bottom Sheet (mobile only) */}
+      {showPhotoOptions && (
+        <Pressable
+          style={styles.photoOverlay}
+          onPress={() => setShowPhotoOptions(false)}
+        >
+          <View style={[styles.photoSheet, { backgroundColor: colors.card }]}>
+            <View style={[styles.photoSheetHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.photoSheetTitle, { color: colors.text }]}>Change Photo</Text>
+
+            <Pressable
+              style={({ pressed }) => [styles.photoOption, pressed && { opacity: 0.6 }]}
+              onPress={() => { setShowPhotoOptions(false); pickFromCamera(); }}
+            >
+              <View style={[styles.photoOptionIcon, { backgroundColor: colors.primaryMuted }]}>
+                <MaterialCommunityIcons name="camera" size={22} color={colors.primary} />
+              </View>
+              <Text style={[styles.photoOptionText, { color: colors.text }]}>Take Photo</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.photoOption, pressed && { opacity: 0.6 }]}
+              onPress={() => { setShowPhotoOptions(false); pickFromGallery(); }}
+            >
+              <View style={[styles.photoOptionIcon, { backgroundColor: colors.primaryMuted }]}>
+                <MaterialCommunityIcons name="image" size={22} color={colors.primary} />
+              </View>
+              <Text style={[styles.photoOptionText, { color: colors.text }]}>Choose from Gallery</Text>
+            </Pressable>
+
+            {avatarUri && (
+              <Pressable
+                style={({ pressed }) => [styles.photoOption, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  setShowPhotoOptions(false);
+                  setAvatarUri(undefined);
+                  authStore.updateProfile({ avatar: undefined });
+                  Toast.show({ type: 'info', text1: 'Photo removed' });
+                }}
+              >
+                <View style={[styles.photoOptionIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <MaterialCommunityIcons name="delete" size={22} color="#EF4444" />
+                </View>
+                <Text style={[styles.photoOptionText, { color: '#EF4444' }]}>Remove Photo</Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.photoCancelBtn,
+                { backgroundColor: colors.surface },
+                pressed && { opacity: 0.6 },
+              ]}
+              onPress={() => setShowPhotoOptions(false)}
+            >
+              <Text style={[styles.photoCancelText, { color: colors.textMuted }]}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      )}
     </ScreenWrapper>
   );
 };
@@ -482,6 +601,11 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
   },
   changePhotoBtn: {
     flexDirection: 'row',
@@ -584,5 +708,63 @@ const styles = StyleSheet.create({
   /* ===== Button ===== */
   buttonWrapper: {
     marginTop: 32,
+  },
+
+  /* ===== Photo Options Sheet ===== */
+  photoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+    zIndex: 100,
+  },
+  photoSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 34,
+  },
+  photoSheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  photoSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+  photoOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 14,
+  },
+  photoOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  photoCancelBtn: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  photoCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

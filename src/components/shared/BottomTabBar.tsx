@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CommonActions } from '@react-navigation/native';
 import { useTheme } from '../../hooks/useTheme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
@@ -175,8 +176,36 @@ const BottomTabBar: React.FC<BottomTabBarProps & { hidden?: boolean }> = ({
               canPreventDefault: true,
             });
 
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+            if (!event.defaultPrevented) {
+              if (!isFocused) {
+                // Switching to a different tab — reset its stack to root
+                navigation.dispatch(
+                  CommonActions.navigate({
+                    name: route.name,
+                    params: { screen: undefined },
+                  })
+                );
+                // Also reset the nested stack so it goes to root screen
+                const targetRoute = state.routes.find((r) => r.name === route.name);
+                if (targetRoute?.state && (targetRoute.state.index ?? 0) > 0) {
+                  navigation.dispatch({
+                    ...CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: route.name }],
+                    }),
+                    target: state.key,
+                  });
+                }
+              } else {
+                // Already focused — pop to root of this stack
+                navigation.dispatch({
+                  ...CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: route.name }],
+                  }),
+                  target: state.key,
+                });
+              }
             }
           };
 

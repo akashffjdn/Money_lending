@@ -8,6 +8,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -309,13 +310,15 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             end={{ x: 1, y: 1 }}
           >
             <View style={[styles.avatarInnerRing, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-              <AppAvatar size={96} name={user?.name ?? 'U'} />
+              {user?.avatar ? (
+                <Image source={{ uri: user.avatar }} style={{ width: 96, height: 96, borderRadius: 48 }} />
+              ) : (
+                <AppAvatar size={96} name={user?.name ?? 'U'} />
+              )}
             </View>
           </LinearGradient>
           <Pressable
-            onPress={() =>
-              Toast.show({ type: 'info', text1: 'Change Photo' })
-            }
+            onPress={() => navigation.navigate('EditProfile')}
             style={[
               styles.cameraBadge,
               {
