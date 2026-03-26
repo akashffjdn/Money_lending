@@ -197,14 +197,19 @@ const BottomTabBar: React.FC<BottomTabBarProps & { hidden?: boolean }> = ({
                   });
                 }
               } else {
-                // Already focused — pop to root of this stack
-                navigation.dispatch({
-                  ...CommonActions.reset({
-                    index: 0,
-                    routes: [{ name: route.name }],
-                  }),
-                  target: state.key,
-                });
+                // Already focused — only pop to root if nested deep
+                const targetRoute = state.routes.find((r) => r.name === route.name);
+                const nestedIndex = targetRoute?.state?.index ?? 0;
+                if (nestedIndex > 0) {
+                  navigation.dispatch({
+                    ...CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: route.name }],
+                    }),
+                    target: state.key,
+                  });
+                }
+                // If already at root, do nothing — avoids flash on double-tap
               }
             }
           };

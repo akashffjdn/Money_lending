@@ -5,7 +5,7 @@ import {
   Text,
   StyleSheet,
   Animated,
-  TouchableWithoutFeedback,
+  Pressable,
   type KeyboardTypeOptions,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
@@ -47,46 +47,45 @@ const AppInput: React.FC<AppInputProps> = ({
   editable = true,
   multiline = false,
 }) => {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  // Animation values
   const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
-  const focusAnim = useRef(new Animated.Value(0)).current;
+  const borderAnim = useRef(new Animated.Value(0)).current;
   const prevError = useRef<string | undefined>(undefined);
 
   const hasValue = value.length > 0;
   const isFloated = isFocused || hasValue;
 
-  // Float label animation
+  // Float label
   useEffect(() => {
     Animated.timing(labelAnim, {
       toValue: isFloated ? 1 : 0,
-      duration: 180,
+      duration: 160,
       useNativeDriver: true,
     }).start();
   }, [isFloated, labelAnim]);
 
-  // Focus glow animation
+  // Focus border highlight
   useEffect(() => {
-    Animated.timing(focusAnim, {
+    Animated.timing(borderAnim, {
       toValue: isFocused ? 1 : 0,
-      duration: 200,
+      duration: 180,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, focusAnim]);
+  }, [isFocused, borderAnim]);
 
   // Error shake
   useEffect(() => {
     if (error && error !== prevError.current) {
       Animated.sequence([
-        Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 6, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -6, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 4, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -4, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
       ]).start();
     }
     prevError.current = error;
@@ -95,33 +94,47 @@ const AppInput: React.FC<AppInputProps> = ({
   // Label interpolations
   const labelTranslateY = labelAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -12],
+    outputRange: [0, -11],
   });
 
   const labelScale = labelAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 0.73],
+    outputRange: [1, 0.75],
   });
 
-  // Colors
+  const labelOpacity = labelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 1],
+  });
+
+  // Animated border color
+  const animatedBorderColor = error
+    ? colors.error
+    : borderAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [
+          mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          colors.primary,
+        ],
+      });
+
+  // Background
+  const fillBg = !editable
+    ? colors.surface
+    : error
+    ? colors.errorMuted
+    : mode === 'dark'
+    ? 'rgba(255,255,255,0.04)'
+    : 'rgba(0,0,0,0.02)';
+
+  // Label color
   const labelColor = error
     ? colors.error
     : isFocused
     ? colors.primary
     : colors.textMuted;
 
-  const borderColor = error
-    ? colors.error
-    : isFocused
-    ? colors.primary
-    : colors.inputBorder;
-
-  const inputBgColor = !editable
-    ? colors.surface
-    : error
-    ? colors.errorMuted
-    : colors.inputBg;
-
+  // Icon color
   const iconColor = error
     ? colors.error
     : isFocused
@@ -146,21 +159,21 @@ const AppInput: React.FC<AppInputProps> = ({
 
   return (
     <Animated.View style={[styles.wrapper, { transform: [{ translateX: shakeAnim }] }]}>
-      <TouchableWithoutFeedback onPress={handleContainerPress}>
-        <View
+      <Pressable onPress={handleContainerPress}>
+        <Animated.View
           style={[
             styles.inputContainer,
             {
-              backgroundColor: inputBgColor,
-              borderColor,
+              backgroundColor: fillBg,
+              borderColor: animatedBorderColor,
               borderWidth: isFocused ? 1.5 : 1,
             },
             multiline && styles.multilineContainer,
             isFocused && {
               shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.12,
-              shadowRadius: 8,
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
               elevation: 2,
             },
           ]}
@@ -170,6 +183,7 @@ const AppInput: React.FC<AppInputProps> = ({
               {React.isValidElement(leftIcon)
                 ? React.cloneElement(leftIcon as React.ReactElement<any>, {
                     color: iconColor,
+                    size: 20,
                   })
                 : leftIcon}
             </View>
@@ -182,8 +196,9 @@ const AppInput: React.FC<AppInputProps> = ({
                   styles.label,
                   {
                     color: labelColor,
+                    opacity: labelOpacity,
                     transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
-                    top: multiline ? 14 : undefined,
+                    top: multiline ? 16 : undefined,
                   },
                 ]}
                 pointerEvents="none"
@@ -198,7 +213,7 @@ const AppInput: React.FC<AppInputProps> = ({
               value={value}
               onChangeText={onChangeText}
               placeholder={isFloated || !label ? placeholder : undefined}
-              placeholderTextColor={colors.textMuted + '80'}
+              placeholderTextColor={colors.textMuted + '60'}
               secureTextEntry={secureTextEntry}
               maxLength={maxLength}
               keyboardType={keyboardType}
@@ -215,6 +230,8 @@ const AppInput: React.FC<AppInputProps> = ({
                 label ? { paddingTop: 10 } : { paddingTop: 0 },
                 multiline && styles.multilineInput,
               ]}
+              selectionColor={colors.primary + '60'}
+              cursorColor={colors.primary}
             />
           </View>
 
@@ -223,12 +240,13 @@ const AppInput: React.FC<AppInputProps> = ({
               {React.isValidElement(rightIcon)
                 ? React.cloneElement(rightIcon as React.ReactElement<any>, {
                     color: iconColor,
+                    size: 20,
                   })
                 : rightIcon}
             </View>
           )}
-        </View>
-      </TouchableWithoutFeedback>
+        </Animated.View>
+      </Pressable>
 
       {(error || (showCharCount && maxLength)) && (
         <View style={styles.bottomRow}>
@@ -264,14 +282,14 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    height: 56,
-    paddingHorizontal: 14,
+    borderRadius: 14,
+    height: 54,
+    paddingHorizontal: 16,
   },
   multilineContainer: {
     height: 120,
     alignItems: 'flex-start',
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   inputWrapper: {
     flex: 1,
@@ -281,8 +299,9 @@ const styles = StyleSheet.create({
   label: {
     position: 'absolute',
     left: 0,
+    fontSize: 14,
     fontWeight: '500',
-    letterSpacing: 0.1,
+    letterSpacing: 0.15,
   },
   textInput: {
     flex: 1,
@@ -294,7 +313,7 @@ const styles = StyleSheet.create({
   } as any,
   multilineInput: {
     textAlignVertical: 'top',
-    paddingTop: 16,
+    paddingTop: 18,
   },
   leftIcon: {
     marginRight: 12,
@@ -303,7 +322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rightIcon: {
-    marginLeft: 10,
+    marginLeft: 12,
     width: 22,
     alignItems: 'center',
     justifyContent: 'center',
@@ -312,7 +331,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 5,
     paddingHorizontal: 4,
     minHeight: 16,
   },
@@ -323,8 +342,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   charCount: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
+    letterSpacing: 0.2,
   },
 });
 

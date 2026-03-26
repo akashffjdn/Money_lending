@@ -422,51 +422,51 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
   // --- Step 2: Employment & Personal Details ---
 
   const renderStep2 = () => {
-    // Employment type card config
+    // Employment type cards with descriptions
     const empTypeCards: {
       key: 'salaried' | 'self_employed' | 'business_owner';
       label: string;
+      desc: string;
       icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
       color: string;
       bg: string;
     }[] = [
-      { key: 'salaried', label: 'Salaried', icon: 'badge-account-horizontal', color: '#C8850A', bg: 'rgba(200,133,10,0.10)' },
-      { key: 'self_employed', label: 'Self-Employed', icon: 'account-tie', color: '#3B82F6', bg: 'rgba(59,130,246,0.10)' },
-      { key: 'business_owner', label: 'Business Owner', icon: 'domain', color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)' },
+      { key: 'salaried', label: 'Salaried', desc: 'Working for a company', icon: 'badge-account-horizontal', color: '#C8850A', bg: 'rgba(200,133,10,0.10)' },
+      { key: 'self_employed', label: 'Self-Employed', desc: 'Freelancer or consultant', icon: 'account-tie', color: '#3B82F6', bg: 'rgba(59,130,246,0.10)' },
+      { key: 'business_owner', label: 'Business Owner', desc: 'Own a registered business', icon: 'domain', color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)' },
     ];
 
-    // Residential type card config
-    const resCards: {
+    // Residential chips
+    const resChips: {
       key: 'owned' | 'rented' | 'family';
       label: string;
       icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
     }[] = [
-      { key: 'owned', label: 'Owned', icon: 'home' },
+      { key: 'owned', label: 'Own House', icon: 'home' },
       { key: 'rented', label: 'Rented', icon: 'home-city-outline' },
-      { key: 'family', label: 'Family', icon: 'home-heart' },
+      { key: 'family', label: 'With Family', icon: 'home-heart' },
     ];
+
+    // Salary quick-select chips
+    const salaryChips = [25000, 50000, 75000, 100000];
 
     return (
       <View>
-        {/* Section 1: Employment Type */}
+        {/* Section 1: Employment Type — conversational header */}
         <MotiView
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'timing', duration: 350 }}
         >
-          {/* Section header with icon */}
-          <View style={styles.dtSectionHeader}>
-            <View style={[styles.dtSectionIconBg, { backgroundColor: 'rgba(200,133,10,0.10)' }]}>
-              <MaterialCommunityIcons name="briefcase-outline" size={16} color="#C8850A" />
-            </View>
-            <View>
-              <Text style={[styles.dtSectionTitle, { color: colors.text }]}>Employment Type</Text>
-              <Text style={[styles.dtSectionSub, { color: colors.textMuted }]}>Select your work category</Text>
-            </View>
-          </View>
+          <Text style={[styles.dtConversationalTitle, { color: colors.text }]}>
+            What do you do for work?
+          </Text>
+          <Text style={[styles.dtConversationalSub, { color: colors.textMuted }]}>
+            This helps us find the best loan options for you
+          </Text>
 
-          {/* Employment type cards */}
-          <View style={styles.dtEmpGrid}>
+          {/* Employment cards — vertical list with descriptions */}
+          <View style={styles.dtEmpList}>
             {empTypeCards.map((et) => {
               const selected = application.employmentType === et.key;
               return (
@@ -474,33 +474,42 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
                   key={et.key}
                   onPress={() => updateApplication({ employmentType: et.key })}
                   style={({ pressed }) => [
-                    styles.dtEmpCard,
+                    styles.dtEmpCardV2,
                     {
                       backgroundColor: selected ? et.bg : colors.card,
                       borderColor: selected ? et.color : colors.border,
                       borderWidth: selected ? 1.5 : 1,
-                      opacity: pressed ? 0.9 : 1,
+                      opacity: pressed ? 0.92 : 1,
                     },
                   ]}
                 >
-                  <View style={[styles.dtEmpIconCircle, { backgroundColor: selected ? et.color + '18' : colors.surface }]}>
-                    <MaterialCommunityIcons name={et.icon} size={20} color={selected ? et.color : colors.textMuted} />
+                  <View style={[styles.dtEmpIconCircle, { backgroundColor: selected ? et.color + '20' : colors.surface }]}>
+                    <MaterialCommunityIcons name={et.icon} size={22} color={selected ? et.color : colors.textMuted} />
                   </View>
-                  <Text style={[styles.dtEmpLabel, { color: selected ? et.color : colors.text }]}>
-                    {et.label}
-                  </Text>
-                  {selected && (
-                    <View style={[styles.dtEmpCheck, { backgroundColor: et.color }]}>
-                      <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
-                    </View>
-                  )}
+                  <View style={styles.dtEmpTextBlock}>
+                    <Text style={[styles.dtEmpLabelV2, { color: selected ? et.color : colors.text }]}>
+                      {et.label}
+                    </Text>
+                    <Text style={[styles.dtEmpDesc, { color: colors.textMuted }]}>
+                      {et.desc}
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.dtEmpRadio,
+                    {
+                      borderColor: selected ? et.color : colors.border,
+                      backgroundColor: selected ? et.color : 'transparent',
+                    },
+                  ]}>
+                    {selected && <MaterialCommunityIcons name="check" size={12} color="#FFFFFF" />}
+                  </View>
                 </Pressable>
               );
             })}
           </View>
         </MotiView>
 
-        {/* Section 2: Employment Details Form */}
+        {/* Section 2: Employment Details Form — progressive reveal */}
         {application.employmentType === 'salaried' && (
           <MotiView
             from={{ opacity: 0, translateY: 14 }}
@@ -510,38 +519,61 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
             <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.dtFormHeader}>
                 <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(200,133,10,0.10)' }]}>
-                  <MaterialCommunityIcons name="file-document-edit-outline" size={14} color="#C8850A" />
+                  <MaterialCommunityIcons name="office-building-outline" size={14} color="#C8850A" />
                 </View>
-                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Employment Details</Text>
+                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Tell us about your job</Text>
               </View>
               <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
               <AppInput
                 label="Company Name"
                 value={application.companyName}
                 onChangeText={(text) => updateApplication({ companyName: text })}
-                placeholder="Enter company name"
+                placeholder="e.g. Infosys, TCS"
                 leftIcon={<MaterialCommunityIcons name="office-building-outline" size={20} />}
               />
               <AppInput
                 label="Designation"
                 value={application.designation}
                 onChangeText={(text) => updateApplication({ designation: text })}
-                placeholder="Enter designation"
+                placeholder="e.g. Software Engineer"
                 leftIcon={<MaterialCommunityIcons name="briefcase-outline" size={20} />}
               />
               <AppInput
-                label="Monthly Salary"
+                label="Monthly Salary (in-hand)"
                 value={application.monthlyIncome > 0 ? String(application.monthlyIncome) : ''}
                 onChangeText={(text) => updateApplication({ monthlyIncome: Number(text) || 0 })}
-                placeholder="Enter monthly salary"
+                placeholder="After deductions"
                 keyboardType="numeric"
                 leftIcon={<MaterialCommunityIcons name="currency-inr" size={20} />}
               />
+              {/* Quick-select salary chips */}
+              <View style={styles.dtQuickChips}>
+                {salaryChips.map((val) => (
+                  <Pressable
+                    key={val}
+                    onPress={() => updateApplication({ monthlyIncome: val })}
+                    style={[
+                      styles.dtQuickChip,
+                      {
+                        backgroundColor: application.monthlyIncome === val ? 'rgba(200,133,10,0.12)' : colors.surface,
+                        borderColor: application.monthlyIncome === val ? '#C8850A' : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.dtQuickChipText,
+                      { color: application.monthlyIncome === val ? '#C8850A' : colors.textMuted },
+                    ]}>
+                      {val >= 100000 ? `${val / 100000}L` : `${val / 1000}K`}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
               <AppInput
                 label="Experience (years)"
                 value={application.experience > 0 ? String(application.experience) : ''}
                 onChangeText={(text) => updateApplication({ experience: Number(text) || 0 })}
-                placeholder="Years of experience"
+                placeholder="e.g. 5"
                 keyboardType="numeric"
                 leftIcon={<MaterialCommunityIcons name="clock-outline" size={20} />}
               />
@@ -558,38 +590,38 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
             <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.dtFormHeader}>
                 <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(59,130,246,0.10)' }]}>
-                  <MaterialCommunityIcons name="file-document-edit-outline" size={14} color="#3B82F6" />
+                  <MaterialCommunityIcons name="store-outline" size={14} color="#3B82F6" />
                 </View>
-                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Business Details</Text>
+                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Tell us about your work</Text>
               </View>
               <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
               <AppInput
-                label="Business Name"
+                label="Business / Practice Name"
                 value={application.businessName}
                 onChangeText={(text) => updateApplication({ businessName: text })}
-                placeholder="Enter business name"
+                placeholder="e.g. Sharma & Associates"
                 leftIcon={<MaterialCommunityIcons name="store-outline" size={20} />}
               />
               <AppInput
-                label="Business Type"
+                label="Nature of Work"
                 value={application.businessType}
                 onChangeText={(text) => updateApplication({ businessType: text })}
-                placeholder="Enter business type"
+                placeholder="e.g. Consulting, Design"
                 leftIcon={<MaterialCommunityIcons name="shape-outline" size={20} />}
               />
               <AppInput
                 label="Monthly Income"
                 value={application.monthlyIncome > 0 ? String(application.monthlyIncome) : ''}
                 onChangeText={(text) => updateApplication({ monthlyIncome: Number(text) || 0 })}
-                placeholder="Enter monthly income"
+                placeholder="Average monthly earnings"
                 keyboardType="numeric"
                 leftIcon={<MaterialCommunityIcons name="currency-inr" size={20} />}
               />
               <AppInput
-                label="Years in Business"
+                label="Years of Experience"
                 value={application.yearsInBusiness > 0 ? String(application.yearsInBusiness) : ''}
                 onChangeText={(text) => updateApplication({ yearsInBusiness: Number(text) || 0 })}
-                placeholder="Years in business"
+                placeholder="e.g. 3"
                 keyboardType="numeric"
                 leftIcon={<MaterialCommunityIcons name="calendar-clock-outline" size={20} />}
               />
@@ -606,30 +638,30 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
             <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.dtFormHeader}>
                 <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(139,92,246,0.10)' }]}>
-                  <MaterialCommunityIcons name="file-document-edit-outline" size={14} color="#8B5CF6" />
+                  <MaterialCommunityIcons name="domain" size={14} color="#8B5CF6" />
                 </View>
-                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Company Details</Text>
+                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Tell us about your business</Text>
               </View>
               <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
               <AppInput
                 label="Company Name"
                 value={application.companyName}
                 onChangeText={(text) => updateApplication({ companyName: text })}
-                placeholder="Enter company name"
+                placeholder="e.g. ABC Pvt Ltd"
                 leftIcon={<MaterialCommunityIcons name="domain" size={20} />}
               />
               <AppInput
                 label="Industry"
                 value={application.businessType}
                 onChangeText={(text) => updateApplication({ businessType: text })}
-                placeholder="Enter industry"
+                placeholder="e.g. Manufacturing, IT"
                 leftIcon={<MaterialCommunityIcons name="factory" size={20} />}
               />
               <AppInput
                 label="Annual Turnover"
                 value={application.annualTurnover > 0 ? String(application.annualTurnover) : ''}
                 onChangeText={(text) => updateApplication({ annualTurnover: Number(text) || 0 })}
-                placeholder="Enter annual turnover"
+                placeholder="Yearly revenue"
                 keyboardType="numeric"
                 leftIcon={<MaterialCommunityIcons name="chart-line" size={20} />}
               />
@@ -637,7 +669,7 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
                 label="Years in Operation"
                 value={application.yearsInBusiness > 0 ? String(application.yearsInBusiness) : ''}
                 onChangeText={(text) => updateApplication({ yearsInBusiness: Number(text) || 0 })}
-                placeholder="Years in operation"
+                placeholder="e.g. 5"
                 keyboardType="numeric"
                 leftIcon={<MaterialCommunityIcons name="calendar-clock-outline" size={20} />}
               />
@@ -645,88 +677,86 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
           </MotiView>
         )}
 
-        {/* Section 3: Residential Status */}
+        {/* Section 3: Residential Status — horizontal chips */}
         <MotiView
           from={{ opacity: 0, translateY: 14 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'timing', duration: 350, delay: 160 }}
         >
-          <View style={styles.dtSectionHeader}>
-            <View style={[styles.dtSectionIconBg, { backgroundColor: 'rgba(14,165,233,0.10)' }]}>
-              <MaterialCommunityIcons name="home-outline" size={16} color="#0EA5E9" />
-            </View>
-            <View>
-              <Text style={[styles.dtSectionTitle, { color: colors.text }]}>Residential Status</Text>
-              <Text style={[styles.dtSectionSub, { color: colors.textMuted }]}>Your current living arrangement</Text>
-            </View>
-          </View>
-
-          <View style={styles.dtResGrid}>
-            {resCards.map((rc) => {
+          <Text style={[styles.dtConversationalTitle, { color: colors.text, marginTop: 8 }]}>
+            Where do you live?
+          </Text>
+          <View style={styles.dtResChipRow}>
+            {resChips.map((rc) => {
               const selected = application.residentialStatus === rc.key;
               return (
                 <Pressable
                   key={rc.key}
                   onPress={() => updateApplication({ residentialStatus: rc.key })}
                   style={({ pressed }) => [
-                    styles.dtResCard,
+                    styles.dtResChip,
                     {
-                      backgroundColor: selected ? 'rgba(14,165,233,0.08)' : colors.card,
+                      backgroundColor: selected ? 'rgba(14,165,233,0.10)' : colors.card,
                       borderColor: selected ? '#0EA5E9' : colors.border,
                       borderWidth: selected ? 1.5 : 1,
                       opacity: pressed ? 0.9 : 1,
                     },
                   ]}
                 >
-                  <View style={[styles.dtResIconCircle, { backgroundColor: selected ? 'rgba(14,165,233,0.15)' : colors.surface }]}>
-                    <MaterialCommunityIcons name={rc.icon} size={20} color={selected ? '#0EA5E9' : colors.textMuted} />
-                  </View>
-                  <Text style={[styles.dtResLabel, { color: selected ? '#0EA5E9' : colors.text }]}>
+                  <MaterialCommunityIcons
+                    name={rc.icon}
+                    size={16}
+                    color={selected ? '#0EA5E9' : colors.textMuted}
+                  />
+                  <Text style={[
+                    styles.dtResChipText,
+                    { color: selected ? '#0EA5E9' : colors.text },
+                  ]}>
                     {rc.label}
                   </Text>
-                  {selected && (
-                    <View style={[styles.dtResCheck, { backgroundColor: '#0EA5E9' }]}>
-                      <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
-                    </View>
-                  )}
                 </Pressable>
               );
             })}
           </View>
         </MotiView>
 
-        {/* Section 4: Financial Information */}
-        <MotiView
-          from={{ opacity: 0, translateY: 14 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 350, delay: 240 }}
-        >
-          <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.dtFormHeader}>
-              <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(34,197,94,0.10)' }]}>
-                <MaterialCommunityIcons name="chart-bar" size={14} color="#22C55E" />
+        {/* Section 4: Financial Information — only show after employment selected */}
+        {application.employmentType && (
+          <MotiView
+            from={{ opacity: 0, translateY: 14 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 350, delay: 240 }}
+          >
+            <View style={[styles.dtFormSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.dtFormHeader}>
+                <View style={[styles.dtFormHeaderIcon, { backgroundColor: 'rgba(34,197,94,0.10)' }]}>
+                  <MaterialCommunityIcons name="chart-bar" size={14} color="#22C55E" />
+                </View>
+                <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Any existing obligations?</Text>
               </View>
-              <Text style={[styles.dtFormHeaderTitle, { color: colors.text }]}>Financial Information</Text>
+              <Text style={[styles.dtFormHelperText, { color: colors.textMuted }]}>
+                This won't affect your eligibility. We just need it for the right offer.
+              </Text>
+              <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
+              <AppInput
+                label="Monthly Expenses"
+                value={application.monthlyExpenses > 0 ? String(application.monthlyExpenses) : ''}
+                onChangeText={(text) => updateApplication({ monthlyExpenses: Number(text) || 0 })}
+                placeholder="Rent, bills, groceries etc."
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="wallet-outline" size={20} />}
+              />
+              <AppInput
+                label="Existing EMIs (if any)"
+                value={application.existingEmi > 0 ? String(application.existingEmi) : ''}
+                onChangeText={(text) => updateApplication({ existingEmi: Number(text) || 0 })}
+                placeholder="Home loan, car loan EMIs etc."
+                keyboardType="numeric"
+                leftIcon={<MaterialCommunityIcons name="credit-card-clock-outline" size={20} />}
+              />
             </View>
-            <View style={[styles.dtFormDivider, { backgroundColor: colors.border }]} />
-            <AppInput
-              label="Monthly Expenses"
-              value={application.monthlyExpenses > 0 ? String(application.monthlyExpenses) : ''}
-              onChangeText={(text) => updateApplication({ monthlyExpenses: Number(text) || 0 })}
-              placeholder="Enter monthly expenses"
-              keyboardType="numeric"
-              leftIcon={<MaterialCommunityIcons name="wallet-outline" size={20} />}
-            />
-            <AppInput
-              label="Existing EMI Obligations"
-              value={application.existingEmi > 0 ? String(application.existingEmi) : ''}
-              onChangeText={(text) => updateApplication({ existingEmi: Number(text) || 0 })}
-              placeholder="Enter existing EMI amount"
-              keyboardType="numeric"
-              leftIcon={<MaterialCommunityIcons name="credit-card-clock-outline" size={20} />}
-            />
-          </View>
-        </MotiView>
+          </MotiView>
+        )}
       </View>
     );
   };
@@ -1281,7 +1311,7 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.flex}
         contentContainerStyle={[
           styles.stepContent,
-          { paddingBottom: currentStep < 4 ? insets.bottom + 110 : insets.bottom + 20 },
+          { paddingBottom: currentStep > 0 && currentStep < 4 ? insets.bottom + 110 : insets.bottom + 20 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -1289,8 +1319,8 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
         {renderCurrentStep()}
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      {currentStep < 4 && (
+      {/* Bottom Navigation — hidden on step 0 (Loan Type) since card tap advances */}
+      {currentStep > 0 && currentStep < 4 && (
         <View
           style={[
             styles.bottomNav,
@@ -1575,107 +1605,108 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Step 2: Details — Section Headers
-  dtSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-    marginTop: 4,
-    gap: 12,
-  },
-  dtSectionIconBg: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dtSectionTitle: {
-    fontSize: 16,
+  // Step 2: Conversational Headers
+  dtConversationalTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: -0.1,
+    letterSpacing: -0.3,
+    marginBottom: 6,
   },
-  dtSectionSub: {
-    fontSize: 12,
+  dtConversationalSub: {
+    fontSize: 13,
     fontWeight: '400',
-    marginTop: 1,
+    marginBottom: 18,
+    lineHeight: 18,
   },
 
-  // Step 2: Details — Employment Type Cards
-  dtEmpGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  dtEmpCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderRadius: 14,
-    position: 'relative',
-  },
-  dtEmpIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  dtEmpLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'center',
-    letterSpacing: 0.1,
-  },
-  dtEmpCheck: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Step 2: Details — Residential Cards
-  dtResGrid: {
-    flexDirection: 'row',
+  // Step 2: Employment Cards — vertical list
+  dtEmpList: {
     gap: 10,
     marginBottom: 20,
   },
-  dtResCard: {
-    flex: 1,
+  dtEmpCardV2: {
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 8,
+    paddingHorizontal: 14,
     borderRadius: 14,
-    position: 'relative',
+    gap: 14,
   },
-  dtResIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  dtEmpIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
   },
-  dtResLabel: {
+  dtEmpTextBlock: {
+    flex: 1,
+  },
+  dtEmpLabelV2: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+  dtEmpDesc: {
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  dtEmpRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Step 2: Residential Chips — horizontal
+  dtResChipRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+    marginTop: 8,
+  },
+  dtResChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  dtResChipText: {
     fontSize: 12,
     fontWeight: '600',
-    textAlign: 'center',
   },
-  dtResCheck: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  // Step 2: Quick-select salary chips
+  dtQuickChips: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  dtQuickChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  dtQuickChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+
+  // Step 2: Form helper text
+  dtFormHelperText: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 10,
+    marginTop: -4,
   },
 
   // Step 2: Details — Form Sections
