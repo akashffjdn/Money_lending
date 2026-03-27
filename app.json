@@ -25,12 +25,10 @@
       },
       "package": "com.unitednexatech.lendease",
       "predictiveBackGestureEnabled": false,
+      "proguard": true,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-image-picker",

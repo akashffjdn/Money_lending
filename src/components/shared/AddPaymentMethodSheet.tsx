@@ -27,6 +27,7 @@ import { MotiView } from '../../utils/MotiCompat';
 import { useTheme } from '../../hooks/useTheme';
 import { usePaymentStore } from '../../store/paymentStore';
 import AppButton from '../ui/AppButton';
+import AppInput from '../ui/AppInput';
 import { BorderRadius } from '../../constants/spacing';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -318,24 +319,16 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: 'timing', duration: 300 }}
             >
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>UPI ID</Text>
-                <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                  <MaterialCommunityIcons name="at" size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.textInput, { color: colors.text }]}
-                    placeholder="yourname@upi"
-                    placeholderTextColor={colors.textMuted}
-                    value={upiId}
-                    onChangeText={setUpiId}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-                </View>
-                <Text style={[styles.inputHint, { color: colors.textMuted }]}>
-                  Enter your UPI ID (e.g., username@ybl, username@paytm)
-                </Text>
-              </View>
+              <AppInput
+                label="UPI ID"
+                placeholder="yourname@upi"
+                value={upiId}
+                onChangeText={setUpiId}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                leftIcon={<MaterialCommunityIcons name="at" size={18} />}
+                hint="Enter your UPI ID (e.g., username@ybl, username@paytm)"
+              />
 
               {/* Popular UPI Apps */}
               <Text style={[styles.popularLabel, { color: colors.textMuted }]}>Popular UPI Apps</Text>
@@ -363,64 +356,44 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: 'timing', duration: 300 }}
             >
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Account Holder Name</Text>
-                <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                  <MaterialCommunityIcons name="account" size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.textInput, { color: colors.text }]}
-                    placeholder="Full name as per bank"
-                    placeholderTextColor={colors.textMuted}
-                    value={accountHolder}
-                    onChangeText={setAccountHolder}
-                    autoCapitalize="words"
-                  />
-                </View>
-              </View>
+              <AppInput
+                label="Account Holder Name"
+                placeholder="Full name as per bank"
+                value={accountHolder}
+                onChangeText={setAccountHolder}
+                autoCapitalize="words"
+                leftIcon={<MaterialCommunityIcons name="account" size={18} />}
+              />
 
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Account Number</Text>
-                <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                  <MaterialCommunityIcons name="numeric" size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.textInput, { color: colors.text }]}
-                    placeholder="Enter account number"
-                    placeholderTextColor={colors.textMuted}
-                    value={accountNumber}
-                    onChangeText={setAccountNumber}
-                    keyboardType="number-pad"
-                  />
-                </View>
-              </View>
+              <AppInput
+                label="Account Number"
+                placeholder="Enter account number"
+                value={accountNumber}
+                onChangeText={setAccountNumber}
+                keyboardType="number-pad"
+                leftIcon={<MaterialCommunityIcons name="numeric" size={18} />}
+              />
 
               <View style={styles.inputGroupRow}>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>IFSC Code</Text>
-                  <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                    <TextInput
-                      style={[styles.textInput, { color: colors.text }]}
-                      placeholder="e.g., SBIN0001234"
-                      placeholderTextColor={colors.textMuted}
-                      value={ifscCode}
-                      onChangeText={(t) => setIfscCode(t.toUpperCase())}
-                      autoCapitalize="characters"
-                      maxLength={11}
-                    />
-                  </View>
+                <View style={{ flex: 1 }}>
+                  <AppInput
+                    label="IFSC Code"
+                    placeholder="e.g., SBIN0001234"
+                    value={ifscCode}
+                    onChangeText={(t) => setIfscCode(t.toUpperCase())}
+                    autoCapitalize="characters"
+                    maxLength={11}
+                  />
                 </View>
                 <View style={{ width: 12 }} />
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Bank Name</Text>
-                  <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                    <TextInput
-                      style={[styles.textInput, { color: colors.text }]}
-                      placeholder="e.g., SBI"
-                      placeholderTextColor={colors.textMuted}
-                      value={bankName}
-                      onChangeText={setBankName}
-                      autoCapitalize="words"
-                    />
-                  </View>
+                <View style={{ flex: 1 }}>
+                  <AppInput
+                    label="Bank Name"
+                    placeholder="e.g., SBI"
+                    value={bankName}
+                    onChangeText={setBankName}
+                    autoCapitalize="words"
+                  />
                 </View>
               </View>
             </MotiView>
@@ -433,67 +406,47 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: 'timing', duration: 300 }}
             >
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Card Number</Text>
-                <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                  <MaterialCommunityIcons name="credit-card-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.textInput, { color: colors.text }]}
-                    placeholder="1234 5678 9012 3456"
-                    placeholderTextColor={colors.textMuted}
-                    value={cardNumber}
-                    onChangeText={formatCardNumber}
-                    keyboardType="number-pad"
-                    maxLength={19}
-                  />
-                </View>
-              </View>
+              <AppInput
+                label="Card Number"
+                placeholder="1234 5678 9012 3456"
+                value={cardNumber}
+                onChangeText={formatCardNumber}
+                keyboardType="number-pad"
+                maxLength={19}
+                leftIcon={<MaterialCommunityIcons name="credit-card-outline" size={18} />}
+              />
 
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Cardholder Name</Text>
-                <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                  <MaterialCommunityIcons name="account" size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.textInput, { color: colors.text }]}
-                    placeholder="Name on card"
-                    placeholderTextColor={colors.textMuted}
-                    value={cardName}
-                    onChangeText={setCardName}
-                    autoCapitalize="words"
-                  />
-                </View>
-              </View>
+              <AppInput
+                label="Cardholder Name"
+                placeholder="Name on card"
+                value={cardName}
+                onChangeText={setCardName}
+                autoCapitalize="words"
+                leftIcon={<MaterialCommunityIcons name="account" size={18} />}
+              />
 
               <View style={styles.inputGroupRow}>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Expiry Date</Text>
-                  <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                    <TextInput
-                      style={[styles.textInput, { color: colors.text }]}
-                      placeholder="MM/YY"
-                      placeholderTextColor={colors.textMuted}
-                      value={cardExpiry}
-                      onChangeText={formatExpiry}
-                      keyboardType="number-pad"
-                      maxLength={5}
-                    />
-                  </View>
+                <View style={{ flex: 1 }}>
+                  <AppInput
+                    label="Expiry Date"
+                    placeholder="MM/YY"
+                    value={cardExpiry}
+                    onChangeText={formatExpiry}
+                    keyboardType="number-pad"
+                    maxLength={5}
+                  />
                 </View>
                 <View style={{ width: 12 }} />
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>CVV</Text>
-                  <View style={[styles.inputRow, { borderColor: colors.inputBorder, backgroundColor: colors.inputBg }]}>
-                    <TextInput
-                      style={[styles.textInput, { color: colors.text }]}
-                      placeholder="•••"
-                      placeholderTextColor={colors.textMuted}
-                      value={cardCvv}
-                      onChangeText={(t) => setCardCvv(t.replace(/\D/g, '').slice(0, 4))}
-                      keyboardType="number-pad"
-                      secureTextEntry
-                      maxLength={4}
-                    />
-                  </View>
+                <View style={{ flex: 1 }}>
+                  <AppInput
+                    label="CVV"
+                    placeholder="•••"
+                    value={cardCvv}
+                    onChangeText={(t) => setCardCvv(t.replace(/\D/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                    secureTextEntry
+                    maxLength={4}
+                  />
                 </View>
               </View>
             </MotiView>
@@ -518,61 +471,63 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
 
   // ── OTP Step ──
   const renderOtpStep = () => (
-    <View style={styles.stepContent}>
-      <View style={styles.otpHeader}>
-        <View style={[styles.otpIconCircle, { backgroundColor: colors.primaryMuted }]}>
-          <MaterialCommunityIcons name="message-lock" size={24} color={colors.primary} />
+    <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <View style={styles.stepContent}>
+        <View style={styles.otpHeader}>
+          <View style={[styles.otpIconCircle, { backgroundColor: colors.primaryMuted }]}>
+            <MaterialCommunityIcons name="message-lock" size={24} color={colors.primary} />
+          </View>
+          <Text style={[styles.otpTitle, { color: colors.text }]}>Verify OTP</Text>
+          <Text style={[styles.otpSubtitle, { color: colors.textSecondary }]}>
+            We've sent a 6-digit code to your registered mobile number
+          </Text>
         </View>
-        <Text style={[styles.otpTitle, { color: colors.text }]}>Verify OTP</Text>
-        <Text style={[styles.otpSubtitle, { color: colors.textSecondary }]}>
-          We've sent a 6-digit code to your registered mobile number
-        </Text>
-      </View>
 
-      <View style={styles.otpRow}>
-        {otp.map((digit, index) => (
-          <TextInput
-            key={index}
-            ref={(el) => { otpRefs.current[index] = el; }}
-            style={[
-              styles.otpInput,
-              {
-                borderColor: digit ? colors.primary : colors.inputBorder,
-                backgroundColor: colors.inputBg,
-                color: colors.text,
-              },
-            ]}
-            value={digit}
-            onChangeText={(v) => handleOtpChange(v.replace(/\D/g, '').slice(0, 1), index)}
-            onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, index)}
-            keyboardType="number-pad"
-            maxLength={1}
-            textAlign="center"
+        <View style={styles.otpRow}>
+          {otp.map((digit, index) => (
+            <TextInput
+              key={index}
+              ref={(el) => { otpRefs.current[index] = el; }}
+              style={[
+                styles.otpInput,
+                {
+                  borderColor: digit ? colors.primary : colors.inputBorder,
+                  backgroundColor: colors.inputBg,
+                  color: colors.text,
+                },
+              ]}
+              value={digit}
+              onChangeText={(v) => handleOtpChange(v.replace(/\D/g, '').slice(0, 1), index)}
+              onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, index)}
+              keyboardType="number-pad"
+              maxLength={1}
+              textAlign="center"
+            />
+          ))}
+        </View>
+
+        <Pressable style={styles.resendRow}>
+          <Text style={[styles.resendText, { color: colors.textMuted }]}>
+            Didn't receive the code?{' '}
+          </Text>
+          <Text style={[styles.resendLink, { color: colors.primary }]}>Resend OTP</Text>
+        </Pressable>
+
+        <View style={styles.actionRow}>
+          <AppButton
+            title="Verify"
+            onPress={handleVerifyOtp}
+            fullWidth
+            loading={loading}
+            disabled={otp.join('').length < 6}
           />
-        ))}
+        </View>
+        <Pressable onPress={() => setStep('form')} style={styles.backLink}>
+          <MaterialCommunityIcons name="chevron-left" size={18} color={colors.textMuted} />
+          <Text style={[styles.backLinkText, { color: colors.textMuted }]}>Back to form</Text>
+        </Pressable>
       </View>
-
-      <Pressable style={styles.resendRow}>
-        <Text style={[styles.resendText, { color: colors.textMuted }]}>
-          Didn't receive the code?{' '}
-        </Text>
-        <Text style={[styles.resendLink, { color: colors.primary }]}>Resend OTP</Text>
-      </Pressable>
-
-      <View style={styles.actionRow}>
-        <AppButton
-          title="Verify"
-          onPress={handleVerifyOtp}
-          fullWidth
-          loading={loading}
-          disabled={otp.join('').length < 6}
-        />
-      </View>
-      <Pressable onPress={() => setStep('form')} style={styles.backLink}>
-        <MaterialCommunityIcons name="chevron-left" size={18} color={colors.textMuted} />
-        <Text style={[styles.backLinkText, { color: colors.textMuted }]}>Back to form</Text>
-      </Pressable>
-    </View>
+    </ScrollView>
   );
 
   // ── Success Step ──
@@ -650,7 +605,7 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <View style={styles.overlay}>
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
@@ -690,7 +645,7 @@ const styles = StyleSheet.create({
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
   handle: { width: 40, height: 4, borderRadius: 2 },
   closeButton: { position: 'absolute', top: 16, right: 16, zIndex: 10 },
-  scrollContent: { maxHeight: SCREEN_HEIGHT * 0.72 },
+  scrollContent: { flexGrow: 0 },
   stepContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
   stepTitle: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
   stepSubtitle: { fontSize: 14, marginBottom: 20 },
@@ -717,13 +672,7 @@ const styles = StyleSheet.create({
   formHeaderIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   formHeaderTitle: { fontSize: 18, fontWeight: '700', marginLeft: 12 },
 
-  inputGroup: { marginBottom: 16 },
   inputGroupRow: { flexDirection: 'row' },
-  inputLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, height: 48, paddingHorizontal: 14 },
-  inputIcon: { marginRight: 10 },
-  textInput: { flex: 1, fontSize: 15, fontWeight: '500', padding: 0 },
-  inputHint: { fontSize: 12, marginTop: 6 },
 
   popularLabel: { fontSize: 12, fontWeight: '600', marginTop: 4, marginBottom: 10 },
   upiAppsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },

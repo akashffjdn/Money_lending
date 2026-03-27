@@ -8,7 +8,6 @@ import {
   Animated,
   Dimensions,
   Modal,
-  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -27,6 +26,7 @@ import {
 } from '../../store/bankStore';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import AppButton from '../../components/ui/AppButton';
+import AppInput from '../../components/ui/AppInput';
 import { MotiView } from '../../utils/MotiCompat';
 import { ProfileStackParamList } from '../../types/navigation';
 import { BorderRadius } from '../../constants/spacing';
@@ -471,38 +471,30 @@ const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard
                       </View>
                     </LinearGradient>
 
-                    <View style={styles.formGroup}>
-                      <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Card Number</Text>
-                      <TextInput
-                        style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                        placeholder="1234 5678 9012 3456"
-                        placeholderTextColor={colors.textMuted}
-                        value={cardNumber}
-                        onChangeText={(t) => setCardNumber(formatCardNum(t))}
-                        keyboardType="number-pad"
-                        maxLength={19}
-                      />
-                    </View>
+                    <AppInput
+                      label="Card Number"
+                      placeholder="1234 5678 9012 3456"
+                      value={cardNumber}
+                      onChangeText={(t) => setCardNumber(formatCardNum(t))}
+                      keyboardType="number-pad"
+                      maxLength={19}
+                      leftIcon={<MaterialCommunityIcons name="credit-card-outline" size={18} />}
+                    />
 
-                    <View style={styles.formGroup}>
-                      <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Card Holder Name</Text>
-                      <TextInput
-                        style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                        placeholder="Name on card"
-                        placeholderTextColor={colors.textMuted}
-                        value={cardHolder}
-                        onChangeText={setCardHolder}
-                        autoCapitalize="characters"
-                      />
-                    </View>
+                    <AppInput
+                      label="Card Holder Name"
+                      placeholder="Name on card"
+                      value={cardHolder}
+                      onChangeText={setCardHolder}
+                      autoCapitalize="characters"
+                      leftIcon={<MaterialCommunityIcons name="account" size={18} />}
+                    />
 
                     <View style={styles.formRow}>
-                      <View style={[styles.formGroup, { flex: 1 }]}>
-                        <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Expiry</Text>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                      <View style={{ flex: 1 }}>
+                        <AppInput
+                          label="Expiry"
                           placeholder="MM/YY"
-                          placeholderTextColor={colors.textMuted}
                           value={expiry}
                           onChangeText={(t) => setExpiry(formatExpiry(t))}
                           keyboardType="number-pad"
@@ -510,12 +502,10 @@ const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard
                         />
                       </View>
                       <View style={{ width: 12 }} />
-                      <View style={[styles.formGroup, { flex: 1 }]}>
-                        <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>CVV</Text>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                      <View style={{ flex: 1 }}>
+                        <AppInput
+                          label="CVV"
                           placeholder="***"
-                          placeholderTextColor={colors.textMuted}
                           value={cvv}
                           onChangeText={setCvv}
                           keyboardType="number-pad"
@@ -531,18 +521,15 @@ const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard
                   </>
                 ) : (
                   <>
-                    <View style={styles.formGroup}>
-                      <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>UPI ID</Text>
-                      <TextInput
-                        style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                        placeholder="yourname@upi"
-                        placeholderTextColor={colors.textMuted}
-                        value={upiId}
-                        onChangeText={setUpiId}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                      />
-                    </View>
+                    <AppInput
+                      label="UPI ID"
+                      placeholder="yourname@upi"
+                      value={upiId}
+                      onChangeText={setUpiId}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      leftIcon={<MaterialCommunityIcons name="at" size={18} />}
+                    />
 
                     {/* Popular UPI Apps */}
                     <Text style={[styles.popularLabel, { color: colors.textMuted }]}>Popular UPI Apps</Text>
@@ -955,7 +942,7 @@ const styles = StyleSheet.create({
   cardPreviewExpiry: { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
 
   /* Form */
-  formGroup: { marginBottom: 14 },
+  formGroup: { marginBottom: 14 }, // kept for formRow layout
   formRow: { flexDirection: 'row' },
   fieldLabel: { fontSize: 13, fontWeight: '500', marginBottom: 6 },
   input: { height: 48, borderRadius: 12, paddingHorizontal: 14, fontSize: 15, borderWidth: 1 },

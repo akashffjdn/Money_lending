@@ -28,9 +28,10 @@ import AppButton from '../../components/ui/AppButton';
 import AnimatedCounter from '../../components/shared/AnimatedCounter';
 import Section from '../../components/layout/Section';
 import EmptyState from '../../components/feedback/EmptyState';
-import PaymentFlowSheet, { PaymentFlowRef } from '../../components/shared/PaymentFlowSheet';
+import SinglePaymentSheet, { SinglePaymentSheetRef } from '../../components/shared/SinglePaymentSheet';
 
 import type { Loan, LoanStatus, RepaymentEntry } from '../../types/loan';
+import type { UpcomingPayment } from '../../types/payment';
 
 type Props = NativeStackScreenProps<LoanStackParamList, 'LoanDetail'>;
 
@@ -109,7 +110,7 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { loanId } = route.params;
 
   const loan = useLoanStore((s) => s.getLoanById(loanId));
-  const paymentRef = useRef<PaymentFlowRef>(null);
+  const paymentRef = useRef<SinglePaymentSheetRef>(null);
 
   const [showAllSchedule, setShowAllSchedule] = useState(false);
 
@@ -127,7 +128,17 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const handlePayNow = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (loan) {
-      paymentRef.current?.open(loan.id, loan.emiAmount, loan.type);
+      const upcomingPayment: UpcomingPayment = {
+        loanId: loan.id,
+        loanType: loan.typeLabel,
+        emiAmount: loan.emiAmount,
+        dueDate: loan.nextEmiDate ?? new Date().toISOString().split('T')[0],
+        isOverdue: loan.status === 'overdue',
+        daysLeft: loan.nextEmiDate
+          ? Math.ceil((new Date(loan.nextEmiDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          : 0,
+      };
+      paymentRef.current?.open(upcomingPayment);
     }
   }, [loan]);
 
@@ -135,7 +146,15 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (loan) {
       const outstanding = loan.totalPayable - (loan.emiAmount * loan.emiPaid);
-      paymentRef.current?.open(loan.id, outstanding, `${loan.type} - Prepayment`);
+      const upcomingPayment: UpcomingPayment = {
+        loanId: loan.id,
+        loanType: `${loan.typeLabel} - Prepayment`,
+        emiAmount: outstanding,
+        dueDate: new Date().toISOString().split('T')[0],
+        isOverdue: false,
+        daysLeft: 0,
+      };
+      paymentRef.current?.open(upcomingPayment);
     }
   }, [loan]);
 
@@ -575,7 +594,7 @@ const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           </Pressable>
         </View>
       )}
-      <PaymentFlowSheet ref={paymentRef} />
+      <SinglePaymentSheet ref={paymentRef} />
     </ScreenWrapper>
   );
 };

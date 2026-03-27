@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { personalInfoSchema } from '../../utils/validators';
+import AppInput from '../../components/ui/AppInput';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'PersonalInfo'>;
 
@@ -75,7 +75,7 @@ const PersonalInfoScreen: React.FC<Props> = ({ navigation }) => {
 
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const {
     control,
@@ -146,75 +146,31 @@ const PersonalInfoScreen: React.FC<Props> = ({ navigation }) => {
       from={{ opacity: 0, translateY: 16 }}
       animate={{ opacity: 1, translateY: 0 }}
       transition={{ type: 'timing' as const, duration: 400, delay: delayMs }}
-      style={styles.fieldWrapper}
     >
-      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       <Controller
         control={control}
         name={name}
         render={({ field: { onChange, onBlur, value } }) => (
-          <View
-            style={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.inputBg,
-                borderColor: errors[name]
-                  ? colors.error
-                  : focusedField === name
-                    ? colors.primary
-                    : colors.inputBorder,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.inputIconCircle,
-                {
-                  backgroundColor:
-                    focusedField === name ? colors.primaryMuted : colors.surface,
-                },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name={icon as any}
-                size={18}
-                color={focusedField === name ? colors.primary : colors.textMuted}
-              />
-            </View>
-            <TextInput
-              style={[styles.textInput, { color: colors.text }]}
-              value={value}
-              onChangeText={(text) =>
-                onChange(extra?.formatter ? extra.formatter(text) : text)
-              }
-              onFocus={() => setFocusedField(name)}
-              onBlur={() => {
-                setFocusedField(null);
-                onBlur();
-              }}
-              placeholder={placeholder}
-              placeholderTextColor={colors.textMuted}
-              keyboardType={keyboardType}
-              autoCapitalize={extra?.autoCapitalize ?? 'sentences'}
-              autoCorrect={name !== 'email'}
-              maxLength={extra?.maxLength}
-            />
-            {value.length > 0 && !errors[name] && (
-              <View style={styles.fieldCheck}>
-                <MaterialCommunityIcons name="check" size={14} color={colors.success} />
-              </View>
-            )}
-          </View>
+          <AppInput
+            label={label}
+            value={value}
+            onChangeText={(text) =>
+              onChange(extra?.formatter ? extra.formatter(text) : text)
+            }
+            onFocus={() => setFocusedField(name)}
+            onBlur={() => {
+              setFocusedField(null);
+              onBlur();
+            }}
+            placeholder={placeholder}
+            keyboardType={keyboardType}
+            autoCapitalize={extra?.autoCapitalize ?? 'sentences'}
+            maxLength={extra?.maxLength}
+            leftIcon={<MaterialCommunityIcons name={icon as any} size={18} />}
+            error={errors[name]?.message}
+          />
         )}
       />
-      {errors[name] && (
-        <View style={styles.errorRow}>
-          <MaterialCommunityIcons name="alert-circle" size={13} color={colors.error} />
-          <Text style={[styles.fieldError, { color: colors.error }]}>
-            {errors[name]?.message}
-          </Text>
-        </View>
-      )}
     </MotiView>
   );
 
@@ -325,9 +281,9 @@ const PersonalInfoScreen: React.FC<Props> = ({ navigation }) => {
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'timing' as const, duration: 400, delay: 500 }}
-          style={styles.fieldWrapper}
+          style={{ marginBottom: 16 }}
         >
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Gender</Text>
+          <Text style={[styles.genderLabel, { color: colors.textSecondary }]}>Gender</Text>
           <Controller
             control={control}
             name="gender"
@@ -376,9 +332,9 @@ const PersonalInfoScreen: React.FC<Props> = ({ navigation }) => {
             )}
           />
           {errors.gender && (
-            <View style={styles.errorRow}>
+            <View style={styles.genderErrorRow}>
               <MaterialCommunityIcons name="alert-circle" size={13} color={colors.error} />
-              <Text style={[styles.fieldError, { color: colors.error }]}>
+              <Text style={[styles.genderErrorText, { color: colors.error }]}>
                 {errors.gender.message}
               </Text>
             </View>
@@ -594,56 +550,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  /* Fields */
-  fieldWrapper: {
-    marginBottom: 18,
-  },
-  label: {
+  /* Gender label */
+  genderLabel: {
     fontSize: 13,
     fontWeight: '600',
-    marginBottom: 8,
-    letterSpacing: 0.3,
+    marginBottom: 6,
+    letterSpacing: 0.1,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    height: 52,
-    paddingHorizontal: 4,
-    paddingRight: 12,
-  },
-  inputIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 6,
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    height: '100%',
-    outlineStyle: 'none',
-  } as any,
-  fieldCheck: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(34,197,94,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorRow: {
+  genderErrorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     marginTop: 6,
-    paddingLeft: 4,
+    paddingLeft: 2,
   },
-  fieldError: {
+  genderErrorText: {
     fontSize: 12,
     fontWeight: '500',
   },

@@ -27,6 +27,7 @@ export interface AppInputProps {
   showCharCount?: boolean;
   editable?: boolean;
   multiline?: boolean;
+  hint?: string;
 }
 
 const AppInput: React.FC<AppInputProps> = ({
@@ -46,36 +47,14 @@ const AppInput: React.FC<AppInputProps> = ({
   showCharCount = false,
   editable = true,
   multiline = false,
+  hint,
 }) => {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
-  const borderAnim = useRef(new Animated.Value(0)).current;
   const prevError = useRef<string | undefined>(undefined);
-
-  const hasValue = value.length > 0;
-  const isFloated = isFocused || hasValue;
-
-  // Float label
-  useEffect(() => {
-    Animated.timing(labelAnim, {
-      toValue: isFloated ? 1 : 0,
-      duration: 160,
-      useNativeDriver: true,
-    }).start();
-  }, [isFloated, labelAnim]);
-
-  // Focus border highlight
-  useEffect(() => {
-    Animated.timing(borderAnim, {
-      toValue: isFocused ? 1 : 0,
-      duration: 180,
-      useNativeDriver: false,
-    }).start();
-  }, [isFocused, borderAnim]);
 
   // Error shake
   useEffect(() => {
@@ -91,55 +70,30 @@ const AppInput: React.FC<AppInputProps> = ({
     prevError.current = error;
   }, [error, shakeAnim]);
 
-  // Label interpolations
-  const labelTranslateY = labelAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -11],
-  });
-
-  const labelScale = labelAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.75],
-  });
-
-  const labelOpacity = labelAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.6, 1],
-  });
-
-  // Animated border color
-  const animatedBorderColor = error
+  // Colors
+  const borderColor = error
     ? colors.error
-    : borderAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [
-          mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-          colors.primary,
-        ],
-      });
+    : isFocused
+    ? colors.primary
+    : colors.inputBorder;
 
-  // Background
-  const fillBg = !editable
-    ? colors.surface
-    : error
-    ? colors.errorMuted
-    : mode === 'dark'
-    ? 'rgba(255,255,255,0.04)'
-    : 'rgba(0,0,0,0.02)';
-
-  // Label color
   const labelColor = error
     ? colors.error
     : isFocused
     ? colors.primary
-    : colors.textMuted;
+    : colors.textSecondary;
 
-  // Icon color
   const iconColor = error
     ? colors.error
     : isFocused
     ? colors.primary
     : colors.textMuted;
+
+  const bgColor = !editable
+    ? colors.surface
+    : error
+    ? colors.errorMuted
+    : colors.inputBg;
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);
@@ -159,23 +113,22 @@ const AppInput: React.FC<AppInputProps> = ({
 
   return (
     <Animated.View style={[styles.wrapper, { transform: [{ translateX: shakeAnim }] }]}>
+      {/* Static label above input */}
+      {label ? (
+        <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
+      ) : null}
+
+      {/* Input row */}
       <Pressable onPress={handleContainerPress}>
-        <Animated.View
+        <View
           style={[
-            styles.inputContainer,
+            styles.inputRow,
             {
-              backgroundColor: fillBg,
-              borderColor: animatedBorderColor,
+              backgroundColor: bgColor,
+              borderColor,
               borderWidth: isFocused ? 1.5 : 1,
             },
             multiline && styles.multilineContainer,
-            isFocused && {
-              shadowColor: colors.primary,
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.08,
-              shadowRadius: 12,
-              elevation: 2,
-            },
           ]}
         >
           {leftIcon && (
@@ -183,71 +136,56 @@ const AppInput: React.FC<AppInputProps> = ({
               {React.isValidElement(leftIcon)
                 ? React.cloneElement(leftIcon as React.ReactElement<any>, {
                     color: iconColor,
-                    size: 20,
+                    size: 18,
                   })
                 : leftIcon}
             </View>
           )}
 
-          <View style={[styles.inputWrapper, multiline && { alignSelf: 'stretch' }]}>
-            {label ? (
-              <Animated.Text
-                style={[
-                  styles.label,
-                  {
-                    color: labelColor,
-                    opacity: labelOpacity,
-                    transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
-                    top: multiline ? 16 : undefined,
-                  },
-                ]}
-                pointerEvents="none"
-                numberOfLines={1}
-              >
-                {label}
-              </Animated.Text>
-            ) : null}
-
-            <TextInput
-              ref={inputRef}
-              value={value}
-              onChangeText={onChangeText}
-              placeholder={isFloated || !label ? placeholder : undefined}
-              placeholderTextColor={colors.textMuted + '60'}
-              secureTextEntry={secureTextEntry}
-              maxLength={maxLength}
-              keyboardType={keyboardType}
-              autoCapitalize={autoCapitalize}
-              editable={editable}
-              multiline={multiline}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              style={[
-                styles.textInput,
-                {
-                  color: editable ? colors.text : colors.textSecondary,
-                },
-                label ? { paddingTop: 10 } : { paddingTop: 0 },
-                multiline && styles.multilineInput,
-              ]}
-              selectionColor={colors.primary + '60'}
-              cursorColor={colors.primary}
-            />
-          </View>
+          <TextInput
+            ref={inputRef}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry={secureTextEntry}
+            maxLength={maxLength}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
+            editable={editable}
+            multiline={multiline}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            style={[
+              styles.textInput,
+              {
+                color: editable ? colors.text : colors.textSecondary,
+              },
+              multiline && styles.multilineInput,
+            ]}
+            selectionColor={colors.primary + '60'}
+            cursorColor={colors.primary}
+          />
 
           {rightIcon && (
             <View style={styles.rightIcon}>
               {React.isValidElement(rightIcon)
                 ? React.cloneElement(rightIcon as React.ReactElement<any>, {
                     color: iconColor,
-                    size: 20,
+                    size: 18,
                   })
                 : rightIcon}
             </View>
           )}
-        </Animated.View>
+        </View>
       </Pressable>
 
+      {/* Hint text */}
+      {hint && !error ? (
+        <Text style={[styles.hintText, { color: colors.textMuted }]}>{hint}</Text>
+      ) : null}
+
+      {/* Error / char count row */}
       {(error || (showCharCount && maxLength)) && (
         <View style={styles.bottomRow}>
           {error ? (
@@ -277,62 +215,60 @@ const AppInput: React.FC<AppInputProps> = ({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 4,
+    marginBottom: 16,
   },
-  inputContainer: {
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
+    letterSpacing: 0.1,
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    height: 54,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 14,
   },
   multilineContainer: {
     height: 120,
     alignItems: 'flex-start',
     paddingVertical: 12,
   },
-  inputWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    height: '100%',
-  },
-  label: {
-    position: 'absolute',
-    left: 0,
-    fontSize: 14,
-    fontWeight: '500',
-    letterSpacing: 0.15,
-  },
   textInput: {
     flex: 1,
     fontSize: 15,
     fontWeight: '500',
-    letterSpacing: 0.1,
     paddingVertical: 0,
     outlineStyle: 'none',
   } as any,
   multilineInput: {
     textAlignVertical: 'top',
-    paddingTop: 18,
+    height: '100%',
   },
   leftIcon: {
-    marginRight: 12,
-    width: 22,
+    marginRight: 10,
+    width: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rightIcon: {
-    marginLeft: 12,
-    width: 22,
+    marginLeft: 10,
+    width: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  hintText: {
+    fontSize: 12,
+    marginTop: 6,
+    paddingHorizontal: 2,
   },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 5,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     minHeight: 16,
   },
   errorText: {

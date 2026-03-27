@@ -8,7 +8,6 @@ import {
   Animated,
   Dimensions,
   Modal,
-  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +21,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useBankStore, type BankAccount } from '../../store/bankStore';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import AppButton from '../../components/ui/AppButton';
+import AppInput from '../../components/ui/AppInput';
 import { MotiView } from '../../utils/MotiCompat';
 import { ProfileStackParamList } from '../../types/navigation';
 import { BorderRadius } from '../../constants/spacing';
@@ -252,7 +252,7 @@ const AddBankSheet: React.FC<AddBankSheetProps> = ({ visible, onClose, onAdd, co
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <View style={styles.sheetOverlay}>
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
             <Pressable style={{ flex: 1 }} onPress={handleClose} />
@@ -303,64 +303,52 @@ const AddBankSheet: React.FC<AddBankSheetProps> = ({ visible, onClose, onAdd, co
                 </View>
 
                 {/* Form Fields */}
-                <View style={styles.formGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Account Holder Name</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                    placeholder="Full name as per bank records"
-                    placeholderTextColor={colors.textMuted}
-                    value={holderName}
-                    onChangeText={setHolderName}
-                    autoCapitalize="words"
-                  />
-                </View>
+                <AppInput
+                  label="Account Holder Name"
+                  placeholder="Full name as per bank records"
+                  value={holderName}
+                  onChangeText={setHolderName}
+                  autoCapitalize="words"
+                  leftIcon={<MaterialCommunityIcons name="account" size={18} />}
+                />
 
-                <View style={styles.formGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Account Number</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                    placeholder="Enter account number"
-                    placeholderTextColor={colors.textMuted}
-                    value={accountNumber}
-                    onChangeText={setAccountNumber}
-                    keyboardType="number-pad"
-                    secureTextEntry
-                  />
-                </View>
+                <AppInput
+                  label="Account Number"
+                  placeholder="Enter account number"
+                  value={accountNumber}
+                  onChangeText={setAccountNumber}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  leftIcon={<MaterialCommunityIcons name="numeric" size={18} />}
+                />
 
-                <View style={styles.formGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Confirm Account Number</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                    placeholder="Re-enter account number"
-                    placeholderTextColor={colors.textMuted}
-                    value={confirmAccount}
-                    onChangeText={setConfirmAccount}
-                    keyboardType="number-pad"
-                  />
-                </View>
+                <AppInput
+                  label="Confirm Account Number"
+                  placeholder="Re-enter account number"
+                  value={confirmAccount}
+                  onChangeText={setConfirmAccount}
+                  keyboardType="number-pad"
+                  leftIcon={<MaterialCommunityIcons name="numeric" size={18} />}
+                />
 
-                <View style={styles.formGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>IFSC Code</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                    placeholder="e.g. SBIN0001234"
-                    placeholderTextColor={colors.textMuted}
-                    value={ifsc}
-                    onChangeText={(v) => {
-                      setIfsc(v.toUpperCase());
-                      if (v.length >= 4) detectBank(v);
-                    }}
-                    autoCapitalize="characters"
-                    maxLength={11}
-                  />
-                  {bankName ? (
-                    <View style={[styles.bankDetected, { backgroundColor: colors.successMuted }]}>
-                      <MaterialCommunityIcons name="check-circle" size={14} color={colors.success} />
-                      <Text style={[styles.bankDetectedText, { color: colors.success }]}>{bankName}</Text>
-                    </View>
-                  ) : null}
-                </View>
+                <AppInput
+                  label="IFSC Code"
+                  placeholder="e.g. SBIN0001234"
+                  value={ifsc}
+                  onChangeText={(v) => {
+                    setIfsc(v.toUpperCase());
+                    if (v.length >= 4) detectBank(v);
+                  }}
+                  autoCapitalize="characters"
+                  maxLength={11}
+                  leftIcon={<MaterialCommunityIcons name="bank-outline" size={18} />}
+                />
+                {bankName ? (
+                  <View style={[styles.bankDetected, { backgroundColor: colors.successMuted, marginTop: -10, marginBottom: 16 }]}>
+                    <MaterialCommunityIcons name="check-circle" size={14} color={colors.success} />
+                    <Text style={[styles.bankDetectedText, { color: colors.success }]}>{bankName}</Text>
+                  </View>
+                ) : null}
 
                 {/* Security note */}
                 <View style={[styles.securityNote, { backgroundColor: colors.surface }]}>
@@ -662,10 +650,7 @@ const styles = StyleSheet.create({
   typeToggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 6, borderWidth: 1 },
   typeToggleText: { fontSize: 14, fontWeight: '600' },
 
-  /* Form */
-  formGroup: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: '500', marginBottom: 6 },
-  input: { height: 48, borderRadius: 12, paddingHorizontal: 14, fontSize: 15, borderWidth: 1 },
+  /* Form - fields now use AppInput */
   bankDetected: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   bankDetectedText: { fontSize: 12, fontWeight: '600' },
 
