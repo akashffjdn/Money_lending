@@ -6,8 +6,8 @@ import {
   Pressable,
   Alert,
   Animated,
-  Dimensions,
   Modal,
+  useWindowDimensions,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import {
   useBankStore,
   type SavedCard,
@@ -33,8 +34,6 @@ import { BorderRadius } from '../../constants/spacing';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'PaymentMethods'>;
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type TabKey = 'cards' | 'upi' | 'autopay';
 
@@ -317,6 +316,7 @@ interface AddCardSheetProps {
 }
 
 const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard, onAddUPI, colors }) => {
+  const { height: screenHeight } = useWindowDimensions();
   const [mode, setMode] = useState<'card' | 'upi'>('card');
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState('');
@@ -325,7 +325,7 @@ const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard
   const [upiId, setUpiId] = useState('');
   const [step, setStep] = useState<'form' | 'success'>('form');
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -346,7 +346,7 @@ const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(() => onClose());
   };
 
@@ -417,7 +417,7 @@ const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard
             <Pressable style={{ flex: 1 }} onPress={handleClose} />
           </Animated.View>
 
-          <Animated.View style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}>
+          <Animated.View style={[styles.sheet, { backgroundColor: colors.card, maxHeight: screenHeight * 0.9, transform: [{ translateY: slideAnim }] }]}>
             <View style={styles.handleBar}>
               <View style={[styles.handle, { backgroundColor: colors.border }]} />
             </View>
@@ -603,6 +603,8 @@ const AddCardSheet: React.FC<AddCardSheetProps> = ({ visible, onClose, onAddCard
 
 const PaymentMethodsScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
+  const { width: windowWidth } = useWindowDimensions();
   const store = useBankStore();
   const [activeTab, setActiveTab] = useState<TabKey>('cards');
   const [showAddSheet, setShowAddSheet] = useState(false);
@@ -638,7 +640,7 @@ const PaymentMethodsScreen: React.FC<Props> = ({ navigation }) => {
     { key: 'autopay', label: 'Autopay', icon: 'repeat' },
   ];
 
-  const tabWidth = (Dimensions.get('window').width - 40) / 3;
+  const tabWidth = (windowWidth - 40) / 3;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -922,7 +924,7 @@ const styles = StyleSheet.create({
 
   /* Sheet */
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, maxHeight: SCREEN_HEIGHT * 0.9, paddingBottom: 34 },
+  sheet: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, paddingBottom: 34 },
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
   handle: { width: 40, height: 4, borderRadius: 2 },
   sheetCloseBtn: { position: 'absolute', top: 16, right: 16, zIndex: 10 },

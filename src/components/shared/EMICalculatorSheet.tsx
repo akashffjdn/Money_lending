@@ -14,13 +14,14 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import AppButton from '../ui/AppButton';
 import AppChip from '../ui/AppChip';
 import AppCard from '../ui/AppCard';
@@ -28,9 +29,6 @@ import AnimatedCounter from './AnimatedCounter';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { calculateEMI, generateSchedule, type ScheduleEntry } from '../../utils/emiCalculator';
 import { BorderRadius, Spacing, Shadows } from '../../constants/spacing';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.85;
 
 const MIN_AMOUNT = 10000;
 const MAX_AMOUNT = 1000000;
@@ -108,6 +106,9 @@ const ScheduleRow = memo<{
 const EMICalculatorSheet = memo(
   forwardRef<EMICalculatorRef>((_, ref) => {
     const { colors } = useTheme();
+    const { isTablet } = useResponsive();
+    const { height: screenHeight } = useWindowDimensions();
+    const sheetHeight = screenHeight * 0.85;
 
     const [visible, setVisible] = useState(false);
     const [amount, setAmount] = useState(100000);
@@ -116,7 +117,7 @@ const EMICalculatorSheet = memo(
     const [showSchedule, setShowSchedule] = useState(false);
     const [showAllScheduleRows, setShowAllScheduleRows] = useState(false);
 
-    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const slideAnim = useRef(new Animated.Value(screenHeight)).current;
     const overlayAnim = useRef(new Animated.Value(0)).current;
 
     const animateIn = useCallback(() => {
@@ -129,7 +130,7 @@ const EMICalculatorSheet = memo(
     const animateOut = useCallback((cb?: () => void) => {
       Animated.parallel([
         Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
       ]).start(cb);
     }, []);
 
@@ -202,7 +203,7 @@ const EMICalculatorSheet = memo(
 
     return (
       <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
-        <View style={styles.overlay}>
+        <View style={[styles.overlay, isTablet && { alignItems: 'center' as const }]}>
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
             <Pressable style={styles.overlayTouchable} onPress={handleClose} />
           </Animated.View>
@@ -210,7 +211,8 @@ const EMICalculatorSheet = memo(
           <Animated.View
             style={[
               styles.sheet,
-              { height: SHEET_HEIGHT, backgroundColor: colors.background, transform: [{ translateY: slideAnim }] },
+              { height: sheetHeight, backgroundColor: colors.background, transform: [{ translateY: slideAnim }] },
+              isTablet && { maxWidth: 500 },
             ]}
           >
             <View style={styles.handleContainer}>

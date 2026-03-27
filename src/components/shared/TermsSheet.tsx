@@ -13,15 +13,13 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.92;
+import { useResponsive } from '../../utils/responsive';
 
 /* ─── Types ─── */
 
@@ -117,10 +115,12 @@ const TERMS_SECTIONS: SectionItem[] = [
 
 const TermsSheet = forwardRef<TermsSheetRef>((_, ref) => {
   const { colors } = useTheme();
+  const { isTablet } = useResponsive();
+  const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   const animateIn = useCallback(() => {
@@ -133,7 +133,7 @@ const TermsSheet = forwardRef<TermsSheetRef>((_, ref) => {
   const animateOut = useCallback((cb?: () => void) => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(cb);
   }, []);
 
@@ -153,7 +153,7 @@ const TermsSheet = forwardRef<TermsSheetRef>((_, ref) => {
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isTablet && { alignItems: 'center' as const }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
           <Pressable style={styles.overlayTouchable} onPress={handleClose} />
         </Animated.View>
@@ -162,10 +162,11 @@ const TermsSheet = forwardRef<TermsSheetRef>((_, ref) => {
           style={[
             styles.sheet,
             {
-              height: SHEET_HEIGHT,
+              height: screenHeight * 0.92,
               backgroundColor: colors.background,
               transform: [{ translateY: slideAnim }],
             },
+            isTablet && { maxWidth: 500 },
           ]}
         >
           {/* Handle */}

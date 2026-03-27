@@ -13,7 +13,7 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
-  Dimensions,
+  useWindowDimensions,
   Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { MotiView } from '../../utils/MotiCompat';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { usePaymentStore } from '../../store/paymentStore';
 import AppButton from '../ui/AppButton';
 import AppCard from '../ui/AppCard';
@@ -29,7 +30,6 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import type { PaymentMethodInfo } from '../../types/payment';
 import { BorderRadius, Spacing } from '../../constants/spacing';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const METHOD_ICONS: Record<string, React.ComponentProps<typeof MaterialCommunityIcons>['name']> = {
   upi: 'cellphone',
@@ -46,6 +46,8 @@ type Step = 0 | 1 | 2 | 3;
 
 const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
   const { colors } = useTheme();
+  const { isTablet } = useResponsive();
+  const { height: screenHeight } = useWindowDimensions();
   const { paymentMethods, processPayment } = usePaymentStore();
 
   const [visible, setVisible] = useState(false);
@@ -57,7 +59,7 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
   const [success, setSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState('');
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const processingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,7 +73,7 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
   const animateOut = useCallback((cb?: () => void) => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(cb);
   }, []);
 
@@ -329,13 +331,13 @@ const PaymentFlowSheet = forwardRef<PaymentFlowRef>((_, ref) => {
       statusBarTranslucent
       onRequestClose={step !== 2 ? handleClose : undefined}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isTablet && { alignItems: 'center' as const }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
           <Pressable style={styles.overlayPressable} onPress={step !== 2 ? handleClose : undefined} />
         </Animated.View>
 
         <Animated.View
-          style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}
+          style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }, isTablet && { maxWidth: 500 }]}
         >
           <View style={styles.handleBar}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -368,7 +370,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     minHeight: 320,
-    maxHeight: SCREEN_HEIGHT * 0.85,
+    maxHeight: '85%',
     paddingBottom: 34,
   },
   handleBar: {

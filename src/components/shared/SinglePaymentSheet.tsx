@@ -12,7 +12,7 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
   Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { MotiView } from '../../utils/MotiCompat';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { usePaymentStore } from '../../store/paymentStore';
 import AppButton from '../ui/AppButton';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -29,8 +30,6 @@ import { openRazorpayCheckout } from '../../utils/razorpay';
 
 import type { UpcomingPayment } from '../../types/payment';
 import { BorderRadius } from '../../constants/spacing';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export interface SinglePaymentSheetRef {
   open: (payment: UpcomingPayment) => void;
@@ -41,6 +40,8 @@ type Step = 'summary' | 'result';
 
 const SinglePaymentSheet = forwardRef<SinglePaymentSheetRef>((_, ref) => {
   const { colors } = useTheme();
+  const { isTablet } = useResponsive();
+  const { height: screenHeight } = useWindowDimensions();
   const { processPayment, paymentMethods } = usePaymentStore();
 
   const [visible, setVisible] = useState(false);
@@ -49,7 +50,7 @@ const SinglePaymentSheet = forwardRef<SinglePaymentSheetRef>((_, ref) => {
   const [success, setSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState('');
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   const animateIn = useCallback(() => {
@@ -62,7 +63,7 @@ const SinglePaymentSheet = forwardRef<SinglePaymentSheetRef>((_, ref) => {
   const animateOut = useCallback((cb?: () => void) => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(cb);
   }, []);
 
@@ -304,13 +305,13 @@ const SinglePaymentSheet = forwardRef<SinglePaymentSheetRef>((_, ref) => {
       statusBarTranslucent
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isTablet && { alignItems: 'center' as const }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
           <Pressable style={styles.overlayPressable} onPress={handleClose} />
         </Animated.View>
 
         <Animated.View
-          style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}
+          style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }, isTablet && { maxWidth: 500 }]}
         >
           <View style={styles.handleBar}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     minHeight: 320,
-    maxHeight: SCREEN_HEIGHT * 0.88,
+    maxHeight: '88%',
     paddingBottom: 34,
   },
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },

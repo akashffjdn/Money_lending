@@ -14,7 +14,7 @@ import {
   Modal,
   Pressable,
   Animated,
-  Dimensions,
+  useWindowDimensions,
   FlatList,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,10 +22,9 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { MotiView } from '../../utils/MotiCompat';
 import { BorderRadius } from '../../constants/spacing';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /* ── Language data ── */
 interface Language {
@@ -116,10 +115,12 @@ const LanguageRow = memo<LanguageRowProps>(({ lang, isSelected, index, onSelect,
 /* ── Language Sheet ── */
 const LanguageSheet = forwardRef<LanguageSheetRef>((_, ref) => {
   const { colors } = useTheme();
+  const { isTablet } = useResponsive();
+  const { height: screenHeight } = useWindowDimensions();
   const [visible, setVisible] = useState(false);
   const [selectedLang, setSelectedLang] = useState('en');
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   const animateIn = useCallback(() => {
@@ -132,7 +133,7 @@ const LanguageSheet = forwardRef<LanguageSheetRef>((_, ref) => {
   const animateOut = useCallback((cb?: () => void) => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(cb);
   }, []);
 
@@ -168,12 +169,12 @@ const LanguageSheet = forwardRef<LanguageSheetRef>((_, ref) => {
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isTablet && { alignItems: 'center' as const }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
           <Pressable style={{ flex: 1 }} onPress={handleClose} />
         </Animated.View>
 
-        <Animated.View style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}>
+        <Animated.View style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }, isTablet && { maxWidth: 500 }]}>
           {/* Handle & Close */}
           <View style={styles.handleBar}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: SCREEN_HEIGHT * 0.78,
+    maxHeight: '78%',
     paddingBottom: 34,
   },
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },

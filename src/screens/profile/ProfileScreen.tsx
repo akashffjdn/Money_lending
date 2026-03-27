@@ -7,7 +7,6 @@ import {
   ScrollView,
   Alert,
   Animated,
-  Dimensions,
   Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -17,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useLoanStore } from '../../store/loanStore';
@@ -199,6 +199,7 @@ const StatCard = memo<StatCardProps>(({ icon, label, value, valueColor, colors, 
 
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { colors, mode } = useTheme();
+  const { s, isTablet } = useResponsive();
   const authStore = useAuthStore();
   const themeStore = useThemeStore();
   const loanStore = useLoanStore();

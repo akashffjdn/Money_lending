@@ -8,9 +8,10 @@ import {
   ScrollView,
   Image,
   Alert,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MotiView } from '../../utils/MotiCompat';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,8 +29,6 @@ import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import StepIndicator from '../../components/shared/StepIndicator';
 import { PincodeLookup } from '../../constants/indianStates';
 import type { AddressDocType } from '../../types/kyc';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'KYC'>;
 type KYCView = 'overview' | 'step1' | 'step2' | 'step3' | 'step4' | 'step5' | 'complete';
@@ -156,6 +155,8 @@ const UploadCard = memo(
 // ===================== MAIN COMPONENT =====================
 const KYCScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
+  const { width: screenWidth } = useWindowDimensions();
   const kycStore = useKYCStore();
 
   // Local state
@@ -1000,7 +1001,7 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
               <View style={[styles.docIconCircle, { backgroundColor: colors.errorMuted }]}>
                 <MaterialCommunityIcons name="file-pdf-box" size={32} color={colors.error} />
               </View>
-              <Text style={[styles.documentUploadText, { color: colors.text }]}>Tap to upload PDF</Text>
+              <Text style={[styles.documentUploadText, { color: colors.text, maxWidth: screenWidth - 80 }]}>Tap to upload PDF</Text>
               <Text style={[styles.documentUploadHint, { color: colors.textMuted }]}>Max file size: 10MB</Text>
             </View>
           ) : (
@@ -1008,7 +1009,7 @@ const KYCScreen: React.FC<Props> = ({ navigation }) => {
               <View style={[styles.docIconCircle, { backgroundColor: colors.successMuted }]}>
                 <MaterialCommunityIcons name="file-check-outline" size={32} color={colors.success} />
               </View>
-              <Text style={[styles.documentUploadText, { color: colors.text }]} numberOfLines={1}>
+              <Text style={[styles.documentUploadText, { color: colors.text, maxWidth: screenWidth - 80 }]} numberOfLines={1}>
                 {bankStatementName || 'Document uploaded'}
               </Text>
               <View style={[styles.uploadSuccessBadge, { backgroundColor: colors.successMuted }]}>
@@ -1673,7 +1674,7 @@ const styles = StyleSheet.create({
   documentUploadText: {
     fontSize: 15,
     fontWeight: '600',
-    maxWidth: SCREEN_WIDTH - 80,
+    // maxWidth is now applied inline via screenWidth from useWindowDimensions
   },
   documentUploadHint: {
     fontSize: 12,

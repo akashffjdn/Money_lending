@@ -18,11 +18,13 @@ import { AuthStackParamList } from '../../types/navigation';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import MadeByFooter from '../../components/shared/MadeByFooter';
+import { useResponsive } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet, width } = useResponsive();
   const sendOTP = useAuthStore((state) => state.sendOTP);
 
   const [phone, setPhone] = useState('');

@@ -6,7 +6,7 @@ import {
   Pressable,
   ScrollView,
   Animated,
-  Dimensions,
+  useWindowDimensions,
   Modal,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 
+import { useResponsive } from '../../utils/responsive';
 import { useTheme } from '../../hooks/useTheme';
 import { useLoanStore } from '../../store/loanStore';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
@@ -26,8 +27,6 @@ import { BorderRadius } from '../../constants/spacing';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'EMICalendar'>;
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CELL_SIZE = Math.floor((SCREEN_WIDTH - 40 - 12) / 7); // 7 columns, 20px padding each side, 12px gap
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /* ── Loan color palette ── */
@@ -201,7 +200,8 @@ interface DayDetailSheetProps {
 }
 
 const DayDetailSheet: React.FC<DayDetailSheetProps> = ({ visible, day, onClose, colors }) => {
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const { height: screenHeight } = useWindowDimensions();
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -216,7 +216,7 @@ const DayDetailSheet: React.FC<DayDetailSheetProps> = ({ visible, day, onClose, 
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(() => onClose());
   };
 
@@ -233,7 +233,7 @@ const DayDetailSheet: React.FC<DayDetailSheetProps> = ({ visible, day, onClose, 
           <Pressable style={{ flex: 1 }} onPress={handleClose} />
         </Animated.View>
 
-        <Animated.View style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}>
+        <Animated.View style={[styles.sheet, { backgroundColor: colors.card, maxHeight: screenHeight * 0.7, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.handleBar}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
           </View>
@@ -363,6 +363,8 @@ const getEMIStatusConfig = (status: string, colors: any) => {
 
 const EMICalendarScreen: React.FC<Props> = ({ navigation }) => {
   const { colors, mode } = useTheme();
+  const { s, isTablet } = useResponsive();
+  const { width, height } = useWindowDimensions();
   const loanStore = useLoanStore();
   const isDark = mode === 'dark';
 
@@ -809,7 +811,7 @@ const styles = StyleSheet.create({
 
   /* Day Detail Sheet */
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, maxHeight: SCREEN_HEIGHT * 0.7, paddingBottom: 34 },
+  sheet: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, paddingBottom: 34 },
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
   handle: { width: 40, height: 4, borderRadius: 2 },
   sheetCloseBtn: { position: 'absolute', top: 16, right: 16, zIndex: 10 },

@@ -19,6 +19,7 @@ import { usePaymentStore } from '../../store/paymentStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
 
+import { useResponsive } from '../../utils/responsive';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import MadeByFooter from '../../components/shared/MadeByFooter';
 import Section from '../../components/layout/Section';
@@ -55,6 +56,7 @@ const LOAN_TYPE_ICONS: Record<string, React.ComponentProps<typeof MaterialCommun
 
 const PaymentDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
   const {
     upcomingPayments,
     paymentMethods,

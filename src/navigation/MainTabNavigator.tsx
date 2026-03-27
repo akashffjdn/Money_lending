@@ -9,6 +9,7 @@ import { PaymentStack } from './PaymentStack';
 import { ProfileStack } from './ProfileStack';
 import BottomTabBar from '../components/shared/BottomTabBar';
 
+// TODO: consider side nav for tablets
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const HIDDEN_SCREENS = ['LoanDetail', 'LoanStatement', 'TrackApplication', 'EMICalculator', 'EditProfile', 'KYC', 'Help', 'Settings', 'BankAccounts', 'PaymentMethods', 'EMICalendar'];

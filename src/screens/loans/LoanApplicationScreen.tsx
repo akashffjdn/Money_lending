@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -16,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { ApplyStackParamList } from '../../types/navigation';
 import { useLoanApplicationStore } from '../../store/loanApplicationStore';
 import { calculateEMI } from '../../utils/emiCalculator';
@@ -35,8 +35,6 @@ import TermsSheet, { type TermsSheetRef } from '../../components/shared/TermsShe
 import type { LoanType } from '../../types/loan';
 
 type Props = NativeStackScreenProps<ApplyStackParamList, 'LoanApplication'>;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const STEPS = ['Loan Type', 'Amount', 'Details', 'Review', 'Submit'];
 
@@ -113,6 +111,7 @@ const LOAN_TYPE_LABELS: Record<LoanType, string> = {
 const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { s, width, isTablet, rv } = useResponsive();
 
   const currentStep = useLoanApplicationStore((s) => s.currentStep);
   const application = useLoanApplicationStore((s) => s.application);
@@ -200,7 +199,7 @@ const LoanApplicationScreen: React.FC<Props> = ({ navigation }) => {
               from={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'timing', duration: 300, delay: index * 60 }}
-              style={styles.typeCardWrapper}
+              style={[styles.typeCardWrapper, { width: (width - 52) / 2 }]}
             >
               <Pressable
                 onPress={async () => {
@@ -1424,9 +1423,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  typeCardWrapper: {
-    width: (SCREEN_WIDTH - 52) / 2,
-  },
+  typeCardWrapper: {},
   typeCard: {
     borderWidth: 1.5,
     borderRadius: 16,
