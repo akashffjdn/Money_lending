@@ -14,6 +14,7 @@ import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { HomeStackParamList } from '../../types/navigation';
 import { calculateEMI, generateSchedule, type ScheduleEntry } from '../../utils/emiCalculator';
 import { formatCurrency, formatAmountShort } from '../../utils/formatCurrency';
@@ -31,6 +32,7 @@ const TENURE_OPTIONS = [3, 6, 12, 18, 24, 36, 48, 60];
 
 const EMICalculatorScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
 
   const [amount, setAmount] = useState(300000);
   const [rate, setRate] = useState(14.5);

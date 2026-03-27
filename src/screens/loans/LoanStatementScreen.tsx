@@ -6,7 +6,7 @@ import {
   Pressable,
   FlatList,
   Animated,
-  Dimensions,
+  useWindowDimensions,
   Alert,
   Share,
   Platform,
@@ -16,6 +16,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
+import { useResponsive } from '../../utils/responsive';
 import { useTheme } from '../../hooks/useTheme';
 import { useLoanStore } from '../../store/loanStore';
 import { usePaymentStore } from '../../store/paymentStore';
@@ -29,8 +30,6 @@ import type { Loan, RepaymentEntry } from '../../types/loan';
 import type { Payment } from '../../types/payment';
 
 type Props = NativeStackScreenProps<LoanStackParamList, 'LoanStatement'>;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 /* ── Filter presets ── */
 type DateFilter = 'all' | '3m' | '6m' | '1y';
@@ -245,6 +244,8 @@ const MonthHeader = memo<MonthHeaderProps>(({ title, total, count, colors }) => 
 
 const LoanStatementScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors, mode } = useTheme();
+  const { s, isTablet } = useResponsive();
+  const { width } = useWindowDimensions();
   const loanStore = useLoanStore();
   const paymentStore = usePaymentStore();
   const isDark = mode === 'dark';

@@ -20,6 +20,7 @@ import Toast from 'react-native-toast-message';
 import { useForm, Controller } from 'react-hook-form';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { useAuthStore } from '../../store/authStore';
 import AppAvatar from '../../components/ui/AppAvatar';
 import AppButton from '../../components/ui/AppButton';
@@ -50,6 +51,7 @@ const GENDER_ICONS: Record<string, string> = {
 
 const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { colors, mode } = useTheme();
+  const { s, isTablet } = useResponsive();
   const authStore = useAuthStore();
   const user = authStore.user;
   const isDark = mode === 'dark';

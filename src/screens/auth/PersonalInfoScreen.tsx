@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,10 +19,9 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { personalInfoSchema } from '../../utils/validators';
 import AppInput from '../../components/ui/AppInput';
+import { useResponsive } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'PersonalInfo'>;
-
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type Gender = 'Male' | 'Female' | 'Other';
 
@@ -51,10 +49,11 @@ const ConfettiParticle: React.FC<{
   delay: number;
   size: number;
   color: string;
-}> = ({ x, delay, size, color }) => (
+  screenHeight: number;
+}> = ({ x, delay, size, color, screenHeight }) => (
   <MotiView
     from={{ translateY: -20, opacity: 1 }}
-    animate={{ translateY: SCREEN_HEIGHT + 20, opacity: 0 }}
+    animate={{ translateY: screenHeight + 20, opacity: 0 }}
     transition={{ type: 'timing' as const, duration: 2000, delay }}
     style={[
       styles.confettiParticle,
@@ -71,6 +70,7 @@ const ConfettiParticle: React.FC<{
 
 const PersonalInfoScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet, width, height } = useResponsive();
   const completeProfile = useAuthStore((state) => state.completeProfile);
 
   const [loading, setLoading] = useState(false);
@@ -94,12 +94,12 @@ const PersonalInfoScreen: React.FC<Props> = ({ navigation }) => {
   const confettiParticles = useMemo(() => {
     return Array.from({ length: 24 }).map((_, i) => ({
       id: i,
-      x: Math.random() * SCREEN_WIDTH,
+      x: Math.random() * width,
       delay: Math.random() * 600,
       size: 5 + Math.random() * 7,
       color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
     }));
-  }, []);
+  }, [width]);
 
   const formatDateInput = useCallback((text: string): string => {
     const digits = text.replace(/\D/g, '').slice(0, 8);
@@ -407,6 +407,7 @@ const PersonalInfoScreen: React.FC<Props> = ({ navigation }) => {
               delay={particle.delay}
               size={particle.size}
               color={particle.color}
+              screenHeight={height}
             />
           ))}
           <MotiView

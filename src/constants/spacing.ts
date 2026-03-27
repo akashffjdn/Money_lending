@@ -1,4 +1,8 @@
-export const Spacing = {
+import { useWindowDimensions } from 'react-native';
+import { moderateScale } from '../utils/responsive';
+
+// --- Base values (unscaled, used as design tokens) ---
+const BASE_SPACING = {
   xs: 4,
   sm: 8,
   md: 12,
@@ -11,12 +15,12 @@ export const Spacing = {
   '5xl': 64,
 } as const;
 
-export const ScreenPadding = {
+const BASE_SCREEN_PADDING = {
   horizontal: 20,
   vertical: 24,
 } as const;
 
-export const BorderRadius = {
+const BASE_BORDER_RADIUS = {
   xs: 6,
   sm: 8,
   md: 12,
@@ -26,6 +30,37 @@ export const BorderRadius = {
   '3xl': 28,
   full: 9999,
 } as const;
+
+// --- Scaled helpers (factor 0.3 = gentle scaling, prevents extreme sizes) ---
+const scaleObj = <T extends Record<string, number>>(
+  obj: T,
+  screenWidth: number,
+  factor: number = 0.3,
+): { [K in keyof T]: number } => {
+  const result = {} as { [K in keyof T]: number };
+  for (const key in obj) {
+    const val = obj[key];
+    // Don't scale 9999 (full border radius)
+    result[key] = val >= 9999 ? val : moderateScale(val, screenWidth, factor);
+  }
+  return result;
+};
+
+// --- Hook: returns scaled spacing values (re-renders on dimension change) ---
+export const useSpacing = () => {
+  const { width } = useWindowDimensions(); // Responsive: re-renders on rotation/resize
+  return {
+    Spacing: scaleObj(BASE_SPACING, width),
+    ScreenPadding: scaleObj(BASE_SCREEN_PADDING, width),
+    BorderRadius: scaleObj(BASE_BORDER_RADIUS, width),
+  };
+};
+
+// --- Static exports (backwards-compatible, for non-component code) ---
+// These remain unscaled; screens/components should prefer useSpacing().
+export const Spacing = { ...BASE_SPACING };
+export const ScreenPadding = { ...BASE_SCREEN_PADDING };
+export const BorderRadius = { ...BASE_BORDER_RADIUS };
 
 export const Shadows = {
   none: {

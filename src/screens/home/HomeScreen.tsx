@@ -6,7 +6,7 @@ import {
   Pressable,
   FlatList,
   RefreshControl,
-  Dimensions,
+  useWindowDimensions,
   StyleSheet,
   Platform,
   ScrollView,
@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { useResponsive } from '../../utils/responsive';
 import { useTheme } from '../../hooks/useTheme';
 import { HomeStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
@@ -43,11 +44,6 @@ import type { Payment, TransactionType } from '../../types/payment';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Home'>;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const LOAN_CARD_WIDTH = 280;
-const LOAN_CARD_GAP = 12;
-const QUICK_ACTION_SIZE = 56;
-const PROMO_CARD_WIDTH = SCREEN_WIDTH - 40;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -214,8 +210,14 @@ const PROMOS: PromoItem[] = [
 
 // --- Main Screen ---
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
+  const { s, rv, width, isTablet, deviceType } = useResponsive();
   const { colors, mode } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const LOAN_CARD_WIDTH = rv({ compact: 240, phone: 280, tablet: 340, desktop: 380 });
+  const LOAN_CARD_GAP = s(12);
+  const PROMO_CARD_WIDTH = width - s(40);
+  const QUICK_ACTION_SIZE = s(56);
 
   // Stores
   const user = useAuthStore((s) => s.user);
@@ -720,7 +722,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               snapToInterval={LOAN_CARD_WIDTH + LOAN_CARD_GAP}
               decelerationRate="fast"
               ListEmptyComponent={
-                <View style={{ width: SCREEN_WIDTH - 40 }}>
+                <View style={{ width: width - s(40) }}>
                   <EmptyState
                     icon="cash-remove"
                     title="No active loans"

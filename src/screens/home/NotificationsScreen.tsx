@@ -22,6 +22,7 @@ import type { Notification, NotificationType } from '../../types/notification';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import AppChip from '../../components/ui/AppChip';
 import EmptyState from '../../components/feedback/EmptyState';
+import { useResponsive } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Notifications'>;
 
@@ -80,6 +81,7 @@ const TYPE_META: Record<
 
 const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
 
   // Store
   const notifications = useNotificationStore((s) => s.notifications);

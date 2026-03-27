@@ -17,6 +17,7 @@ import { AuthStackParamList } from '../../types/navigation';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import MadeByFooter from '../../components/shared/MadeByFooter';
+import { useResponsive } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
 
@@ -26,6 +27,7 @@ const COUNTDOWN = 30;
 const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
   const { phone } = route.params;
   const { colors } = useTheme();
+  const { s, isTablet, width } = useResponsive();
   const { verifyOTP, sendOTP } = useAuthStore();
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));

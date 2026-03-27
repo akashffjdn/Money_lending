@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
   Animated,
   ScrollView,
 } from 'react-native';
@@ -23,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 import { MotiView } from '../../utils/MotiCompat';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { usePaymentStore } from '../../store/paymentStore';
 import AppButton from '../ui/AppButton';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -30,8 +31,6 @@ import { openRazorpayCheckout } from '../../utils/razorpay';
 
 import type { UpcomingPayment } from '../../types/payment';
 import { BorderRadius } from '../../constants/spacing';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export interface OverduePaymentSheetRef {
   open: (overduePayments: UpcomingPayment[]) => void;
@@ -42,6 +41,8 @@ type Step = 'summary' | 'result';
 
 const OverduePaymentSheet = forwardRef<OverduePaymentSheetRef>((_, ref) => {
   const { colors } = useTheme();
+  const { isTablet } = useResponsive();
+  const { height: screenHeight } = useWindowDimensions();
   const { processPayment, paymentMethods } = usePaymentStore();
 
   const [visible, setVisible] = useState(false);
@@ -50,7 +51,7 @@ const OverduePaymentSheet = forwardRef<OverduePaymentSheetRef>((_, ref) => {
   const [success, setSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState('');
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -76,7 +77,7 @@ const OverduePaymentSheet = forwardRef<OverduePaymentSheetRef>((_, ref) => {
   const animateOut = useCallback((cb?: () => void) => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(cb);
   }, []);
 
@@ -364,13 +365,13 @@ const OverduePaymentSheet = forwardRef<OverduePaymentSheetRef>((_, ref) => {
       statusBarTranslucent
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isTablet && { alignItems: 'center' as const }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
           <Pressable style={styles.overlayPressable} onPress={handleClose} />
         </Animated.View>
 
         <Animated.View
-          style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}
+          style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }, isTablet && { maxWidth: 500 }]}
         >
           <View style={styles.handleBar}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -395,13 +396,13 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: SCREEN_HEIGHT * 0.9,
+    maxHeight: '90%',
     paddingBottom: 34,
   },
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
   handle: { width: 40, height: 4, borderRadius: 2 },
   closeButton: { position: 'absolute', top: 16, right: 16, zIndex: 10 },
-  scrollContent: { maxHeight: SCREEN_HEIGHT * 0.76 },
+  scrollContent: { maxHeight: '76%' },
   stepContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
 
   // Urgency Header

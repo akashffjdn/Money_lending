@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MotiView } from '../../utils/MotiCompat';
@@ -21,6 +20,7 @@ import { useLoanStore } from '../../store/loanStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
 
+import { useResponsive } from '../../utils/responsive';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import AppCard from '../../components/ui/AppCard';
 import AppBadge from '../../components/ui/AppBadge';
@@ -107,6 +107,7 @@ const InfoRow: React.FC<InfoRowProps> = ({ label, value, colors }) => (
 const LoanDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { s, isTablet } = useResponsive();
   const { loanId } = route.params;
 
   const loan = useLoanStore((s) => s.getLoanById(loanId));

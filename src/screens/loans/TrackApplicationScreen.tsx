@@ -9,6 +9,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MotiView } from '../../utils/MotiCompat';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { useResponsive } from '../../utils/responsive';
 import { useTheme } from '../../hooks/useTheme';
 import { ApplyStackParamList } from '../../types/navigation';
 import { useLoanApplicationStore } from '../../store/loanApplicationStore';
@@ -96,6 +97,7 @@ function formatSubmittedDate(iso: string): string {
 
 const TrackApplicationScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
   const submittedApplications = useLoanApplicationStore((s) => s.submittedApplications);
 
   // If an applicationId is passed, auto-expand that one

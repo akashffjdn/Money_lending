@@ -7,7 +7,6 @@ import {
   FlatList,
   Pressable,
   ScrollView,
-  Dimensions,
   RefreshControl,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -21,6 +20,7 @@ import { LoanStackParamList } from '../../types/navigation';
 import { useLoanStore } from '../../store/loanStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
+import { useResponsive } from '../../utils/responsive';
 
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import AppChip from '../../components/ui/AppChip';
@@ -34,7 +34,6 @@ import type { Loan, LoanType, LoanStatus } from '../../types/loan';
 
 type Props = NativeStackScreenProps<LoanStackParamList, 'LoanList'>;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // --- Helpers ---
@@ -268,6 +267,7 @@ const LoadingSkeleton: React.FC = () => (
 // --- Main Screen ---
 
 const LoanListScreen: React.FC<Props> = ({ navigation }) => {
+  const { s, isTablet, deviceType, rv } = useResponsive();
   const { colors } = useTheme();
   const loans = useLoanStore((s) => s.loans);
   const isLoading = useLoanStore((s) => s.isLoading);

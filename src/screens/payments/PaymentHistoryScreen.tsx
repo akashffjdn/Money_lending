@@ -25,6 +25,7 @@ import MadeByFooter from '../../components/shared/MadeByFooter';
 
 import type { Payment, TransactionType, PaymentStatus } from '../../types/payment';
 import { BorderRadius, Spacing } from '../../constants/spacing';
+import { useResponsive } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<PaymentStackParamList, 'PaymentHistory'>;
 
@@ -150,6 +151,7 @@ const getMonthKey = (dateStr: string): string => {
 
 const PaymentHistoryScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
   const { payments, isLoading, loadPayments } = usePaymentStore();
 
   const [selectedMonth, setSelectedMonth] = useState('Mar 2026');

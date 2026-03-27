@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   NativeScrollEvent,
@@ -18,10 +17,9 @@ import * as Haptics from 'expo-haptics';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types/navigation';
 import MadeByFooter from '../../components/shared/MadeByFooter';
+import { useResponsive } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SlideInfo {
   title: string;
@@ -62,6 +60,7 @@ const AUTO_SLIDE_MS = 4000;
 
 const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { s, isTablet, width } = useResponsive();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,13 +71,13 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
       setActiveIndex((prev) => {
         const next = (prev + 1) % SLIDES.length;
         flatListRef.current?.scrollToOffset({
-          offset: next * SCREEN_WIDTH,
+          offset: next * width,
           animated: true,
         });
         return next;
       });
     }, AUTO_SLIDE_MS);
-  }, []);
+  }, [width]);
 
   useEffect(() => {
     startAutoSlide();
@@ -89,13 +88,13 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+      const idx = Math.round(e.nativeEvent.contentOffset.x / width);
       if (idx >= 0 && idx < SLIDES.length && idx !== activeIndex) {
         setActiveIndex(idx);
         startAutoSlide();
       }
     },
-    [activeIndex, startAutoSlide],
+    [activeIndex, startAutoSlide, width],
   );
 
   const handleGetStarted = useCallback(() => {
@@ -112,19 +111,19 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
     (index: number) => {
       setActiveIndex(index);
       flatListRef.current?.scrollToOffset({
-        offset: index * SCREEN_WIDTH,
+        offset: index * width,
         animated: true,
       });
       startAutoSlide();
     },
-    [startAutoSlide],
+    [startAutoSlide, width],
   );
 
   const currentSlide = SLIDES[activeIndex];
 
   const renderSlide = useCallback(
     ({ item }: { item: SlideInfo }) => (
-      <View style={styles.slide}>
+      <View style={[styles.slide, { width }]}>
         <ActivityIndicator
           size="small"
           color={item.accent}
@@ -132,12 +131,12 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
         />
         <Image
           source={{ uri: item.image }}
-          style={styles.slideImage}
+          style={[styles.slideImage, { width: width - 24 }]}
           resizeMode="contain"
         />
       </View>
     ),
-    [],
+    [width],
   );
 
   return (
@@ -175,15 +174,15 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
         keyExtractor={(_, i) => String(i)}
         horizontal
         pagingEnabled
-        snapToInterval={SCREEN_WIDTH}
+        snapToInterval={width}
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handleScroll}
         bounces={false}
         style={styles.carousel}
         getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
+          length: width,
+          offset: width * index,
           index,
         })}
       />
@@ -201,13 +200,13 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.mainSubtitle}>{currentSlide.subtitle}</Text>
 
         <View style={styles.pagination}>
-          {SLIDES.map((s, i) => (
+          {SLIDES.map((slide, i) => (
             <Pressable key={i} onPress={() => goToSlide(i)} hitSlop={8}>
               <View
                 style={[
                   styles.dot,
                   activeIndex === i
-                    ? [styles.dotActive, { backgroundColor: s.accent }]
+                    ? [styles.dotActive, { backgroundColor: slide.accent }]
                     : styles.dotInactive,
                 ]}
               />
@@ -316,13 +315,11 @@ const styles = StyleSheet.create({
     height: 480,
   },
   slide: {
-    width: SCREEN_WIDTH,
     height: 480,
     alignItems: 'center',
     justifyContent: 'center',
   },
   slideImage: {
-    width: SCREEN_WIDTH - 24,
     height: 460,
     position: 'absolute',
     zIndex: 1,

@@ -6,8 +6,8 @@ import {
   Pressable,
   Alert,
   Animated,
-  Dimensions,
   Modal,
+  useWindowDimensions,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { useBankStore, type BankAccount } from '../../store/bankStore';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import AppButton from '../../components/ui/AppButton';
@@ -27,8 +28,6 @@ import { ProfileStackParamList } from '../../types/navigation';
 import { BorderRadius } from '../../constants/spacing';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'BankAccounts'>;
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /* ── Bank brand colors ── */
 const BANK_COLORS: Record<string, { gradient: [string, string]; icon: string }> = {
@@ -164,6 +163,7 @@ interface AddBankSheetProps {
 }
 
 const AddBankSheet: React.FC<AddBankSheetProps> = ({ visible, onClose, onAdd, colors }) => {
+  const { height: screenHeight } = useWindowDimensions();
   const [holderName, setHolderName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [confirmAccount, setConfirmAccount] = useState('');
@@ -172,7 +172,7 @@ const AddBankSheet: React.FC<AddBankSheetProps> = ({ visible, onClose, onAdd, co
   const [accountType, setAccountType] = useState<'savings' | 'current'>('savings');
   const [step, setStep] = useState<'form' | 'verifying' | 'success'>('form');
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -194,7 +194,7 @@ const AddBankSheet: React.FC<AddBankSheetProps> = ({ visible, onClose, onAdd, co
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(() => onClose());
   };
 
@@ -258,7 +258,7 @@ const AddBankSheet: React.FC<AddBankSheetProps> = ({ visible, onClose, onAdd, co
             <Pressable style={{ flex: 1 }} onPress={handleClose} />
           </Animated.View>
 
-          <Animated.View style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}>
+          <Animated.View style={[styles.sheet, { backgroundColor: colors.card, maxHeight: screenHeight * 0.9, transform: [{ translateY: slideAnim }] }]}>
             <View style={styles.handleBar}>
               <View style={[styles.handle, { backgroundColor: colors.border }]} />
             </View>
@@ -417,6 +417,7 @@ const AddBankSheet: React.FC<AddBankSheetProps> = ({ visible, onClose, onAdd, co
 
 const BankAccountsScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
   const store = useBankStore();
   const [showAddSheet, setShowAddSheet] = useState(false);
 
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
 
   /* Sheet */
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, maxHeight: SCREEN_HEIGHT * 0.9, paddingBottom: 34 },
+  sheet: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, paddingBottom: 34 },
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
   handle: { width: 40, height: 4, borderRadius: 2 },
   sheetClose: { position: 'absolute', top: 16, right: 16, zIndex: 10 },

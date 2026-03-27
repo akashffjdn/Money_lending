@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import MadeByFooter from '../../components/shared/MadeByFooter';
 import { ProfileStackParamList } from '../../types/navigation';
@@ -264,6 +265,7 @@ const ContactCard = memo<ContactCardProps>(
 
 const HelpScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
+  const { s, isTablet } = useResponsive();
 
   const [searchText, setSearchText] = useState('');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);

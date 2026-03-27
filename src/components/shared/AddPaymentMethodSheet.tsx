@@ -12,7 +12,7 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
   Animated,
   ScrollView,
   TextInput,
@@ -25,12 +25,11 @@ import * as Haptics from 'expo-haptics';
 import { MotiView } from '../../utils/MotiCompat';
 
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../utils/responsive';
 import { usePaymentStore } from '../../store/paymentStore';
 import AppButton from '../ui/AppButton';
 import AppInput from '../ui/AppInput';
 import { BorderRadius } from '../../constants/spacing';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type MethodType = 'upi' | 'bank' | 'card';
 type Step = 'select_type' | 'form' | 'otp' | 'success';
@@ -76,6 +75,8 @@ const METHOD_OPTIONS: Array<{
 
 const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
   const { colors } = useTheme();
+  const { isTablet } = useResponsive();
+  const { height: screenHeight } = useWindowDimensions();
 
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState<Step>('select_type');
@@ -101,7 +102,7 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<Array<TextInput | null>>([]);
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   const animateIn = useCallback(() => {
@@ -114,7 +115,7 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
   const animateOut = useCallback((cb?: () => void) => {
     Animated.parallel([
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: screenHeight, duration: 250, useNativeDriver: true }),
     ]).start(cb);
   }, []);
 
@@ -607,13 +608,13 @@ const AddPaymentMethodSheet = forwardRef<AddPaymentMethodSheetRef>((_, ref) => {
         style={{ flex: 1 }}
         behavior="padding"
       >
-        <View style={styles.overlay}>
+        <View style={[styles.overlay, isTablet && { alignItems: 'center' as const }]}>
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: overlayAnim }]}>
             <Pressable style={styles.overlayPressable} onPress={handleClose} />
           </Animated.View>
 
           <Animated.View
-            style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}
+            style={[styles.sheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }, isTablet && { maxWidth: 500 }]}
           >
             <View style={styles.handleBar}>
               <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -639,7 +640,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: SCREEN_HEIGHT * 0.9,
+    maxHeight: '90%',
     paddingBottom: 34,
   },
   handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
